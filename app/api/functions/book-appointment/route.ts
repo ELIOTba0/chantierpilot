@@ -2,7 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { db, journaliser } from "@/lib/db";
 import { cleFonctionValide } from "@/lib/retell";
 import { creerRendezVous } from "@/lib/agenda";
-import { dureePour, dansLaZone, normaliserUrgence, creneauEnFrancais } from "@/lib/metier";
+import {
+  dureePour, dansLaZone, normaliserUrgence, creneauEnFrancais, normaliserCommune,
+} from "@/lib/metier";
+import { coordonnees } from "@/lib/adresse";
 
 export const runtime = "nodejs";
 
@@ -98,12 +101,21 @@ export async function POST(req: NextRequest) {
   const fin = new Date(new Date(debut).getTime() + dureeMin * 60000).toISOString();
   const adresse = (a.adresse as string) ?? "";
 
+  // Coordonnées de l'intervention, pour la carte du tableau de bord.
+  // Le backend géocode lui-même : l'agent n'a pas à transporter des
+  // nombres à virgule dans une conversation téléphonique.
+  const point = adresse
+    ? await coordonnees(adresse, commune, normaliserCommune)
+    : null;
+
   // 1. La fiche demande — écrite même si l'agenda échoue ensuite.
   const { data: demande, error: errDemande } = await db
     .from("demandes")
     .insert({
       plombier_id: plombier.id,
       retell_call_id: callId,
+      latitude: point?.lat ?? null,
+      longitude: point?.lon ?? null,
       type_probleme: typeProbleme,
       description_client: (a.description_client as string) ?? null,
       adresse,

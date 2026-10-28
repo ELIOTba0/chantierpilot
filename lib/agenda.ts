@@ -137,36 +137,46 @@ export async function creneauxLibres(opts: {
     const plage = horaires[numeroJour];
     if (!plage) continue; // jour non travaillé
 
-    const [debutJour, finJour] = plage.split("-");
-    const [hDeb, mDeb] = debutJour.split(":").map(Number);
-    const [hFin, mFin] = finJour.split(":").map(Number);
+    // Plusieurs tranches par jour, séparées par des virgules :
+    // « 08:00-12:00, 13:30-18:00 ». Un plombier déjeune, et un
+    // rendez-vous à midi trente ne se propose pas.
+    for (const tranche of plage.split(",")) {
+      if (resultats.length >= maxResultats) break;
 
-    const ouverture = new Date(jour);
-    ouverture.setHours(hDeb, mDeb, 0, 0);
-    const fermeture = new Date(jour);
-    fermeture.setHours(hFin, mFin, 0, 0);
+      const [debutJour, finJour] = tranche.trim().split("-");
+      if (!debutJour || !finJour) continue;
 
-    // Jamais de créneau dans les deux heures qui viennent : le plombier
-    // est en intervention et doit pouvoir finir son chantier en cours.
-    const plusTot = arrondirAuDemiHeure(
-      Math.max(ouverture.getTime(), maintenant.getTime() + 2 * 3600000)
-    );
+      const [hDeb, mDeb] = debutJour.split(":").map(Number);
+      const [hFin, mFin] = finJour.split(":").map(Number);
+      if ([hDeb, mDeb, hFin, mFin].some(Number.isNaN)) continue;
 
-    for (
-      let t = plusTot;
-      t + dureeMs <= fermeture.getTime() && resultats.length < maxResultats;
-      t += 30 * 60000
-    ) {
-      const finCreneau = t + dureeMs;
-      const chevauche = plages.some(
-        (p) => t < p.fin + margeMs && finCreneau + margeMs > p.debut
+      const ouverture = new Date(jour);
+      ouverture.setHours(hDeb, mDeb, 0, 0);
+      const fermeture = new Date(jour);
+      fermeture.setHours(hFin, mFin, 0, 0);
+
+      // Jamais de créneau dans les deux heures qui viennent : le
+      // plombier est en intervention et doit finir son chantier.
+      const plusTot = arrondirAuDemiHeure(
+        Math.max(ouverture.getTime(), maintenant.getTime() + 2 * 3600000)
       );
-      if (!chevauche) {
-        resultats.push({
-          debut: new Date(t).toISOString(),
-          fin: new Date(finCreneau).toISOString(),
-        });
-        t += dureeMs; // on ne propose pas deux créneaux qui se chevauchent
+
+      for (
+        let t = plusTot;
+        t + dureeMs <= fermeture.getTime() && resultats.length < maxResultats;
+        t += 30 * 60000
+      ) {
+        const finCreneau = t + dureeMs;
+        const chevauche = plages.some(
+          (p) => t < p.fin + margeMs && finCreneau + margeMs > p.debut
+        );
+        if (!chevauche) {
+          resultats.push({
+            debut: new Date(t).toISOString(),
+            fin: new Date(finCreneau).toISOString(),
+          });
+          t += dureeMs; // pas deux créneaux qui se chevauchent
+        }
       }
     }
   }

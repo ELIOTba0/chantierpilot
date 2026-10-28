@@ -2,36 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { journaliser } from "@/lib/db";
 import { cleFonctionValide } from "@/lib/retell";
 import { normaliserCommune } from "@/lib/metier";
+import { interrogerBAN } from "@/lib/adresse";
 
 export const runtime = "nodejs";
 
-type TraitBAN = {
-  label: string;
-  score: number;
-  housenumber?: string;
-  street?: string;
-  postcode: string;
-  city: string;
-  type: string;
-};
-
-async function interrogerBAN(requete: string): Promise<TraitBAN[]> {
-  const url = new URL("https://api-adresse.data.gouv.fr/search/");
-  url.searchParams.set("q", requete);
-  url.searchParams.set("limit", "8");
-  url.searchParams.set("autocomplete", "0");
-
-  const r = await fetch(url, { signal: AbortSignal.timeout(6000) });
-  if (!r.ok) throw new Error(`BAN a répondu ${r.status}`);
-  const data = await r.json();
-  return (data.features ?? []).map(
-    (f: { properties: TraitBAN }) => f.properties
-  );
-}
-
 /**
- * Vérifie une adresse contre la Base Adresse Nationale, le référentiel
- * officiel publié en open data par l'État. Gratuit, sans clé.
+ * Vérifie une adresse contre la Base Adresse Nationale.
  *
  * GARDE-FOU ESSENTIEL : on ne propose jamais une adresse située dans
  * une autre commune que celle annoncée par le client. Sans ce filtre,
@@ -73,13 +49,10 @@ export async function POST(req: NextRequest) {
     }
 
     // --- Filtre géographique ---------------------------------------
-    // Tout ce qui n'est pas dans la commune annoncée est écarté.
     let candidats = traits;
     if (commune) {
       const cible = normaliserCommune(commune);
-      candidats = traits.filter(
-        (t) => normaliserCommune(t.city) === cible
-      );
+      candidats = traits.filter((t) => normaliserCommune(t.city) === cible);
 
       if (candidats.length === 0) {
         const ailleurs = [...new Set(traits.map((t) => t.city))].slice(0, 3);
@@ -110,7 +83,6 @@ export async function POST(req: NextRequest) {
 
       return NextResponse.json({
         valide: true,
-        // Forme écrite, pour la fiche du plombier.
         adresse_normalisee: meilleur.label,
         rue,
         code_postal: meilleur.postcode,
@@ -128,8 +100,10 @@ export async function POST(req: NextRequest) {
       valide: false,
       raison: meilleur.type === "housenumber" ? "incertain" : "numero_manquant",
       suggestions: candidats.slice(0, 3).map((t) => t.label),
-      suggestions_a_dire: candidats.slice(0, 3).map((t) =>
-        `${[t.housenumber, t.street].filter(Boolean).join(" ") || t.label.replace(/\s*\d{5}.*$/, "")}, à ${t.city}`
+      suggestions_a_dire: candidats.slice(0, 3).map(
+        (t) =>
+          `${[t.housenumber, t.street].filter(Boolean).join(" ") ||
+            t.label.replace(/\s*\d{5}.*$/, "")}, à ${t.city}`
       ),
       consigne:
         meilleur.type === "housenumber"
