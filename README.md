@@ -1,36 +1,63 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Astio — interface de supervision (prototype frontend)
 
-## Getting Started
+Astio prend les appels entrants d'un plombier indépendant grâce à un agent vocal.
+Cette interface permet au professionnel de voir ce qu'Astio a géré et de ne
+traiter que les décisions qui lui reviennent.
 
-First, run the development server:
+> Prototype 100 % navigateur : aucune API, aucun backend, aucune clé. Les données
+> sont fictives et les SMS au client sont simulés.
+
+## Démarrer
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Puis ouvrir http://localhost:3000. Vérifications : `npm run lint`, `npx tsc --noEmit`, `npm run build`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Règle métier
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+L'agent vocal **ne fixe jamais de rendez-vous**. Il recueille les disponibilités du
+client et suggère un créneau ; le plombier répond **oui** (rendez-vous confirmé,
+SMS au client) ou **non** (autre créneau, ou refus de la demande).
 
-## Learn More
+Quatre dimensions sont modélisées séparément : statut du dossier, état du
+rendez-vous, priorité et décision requise (transversale aux statuts).
 
-To learn more about Next.js, take a look at the following resources:
+## Pages
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+| Page | Contenu |
+| --- | --- |
+| Vue d'ensemble | Appels reçus aujourd'hui, appels à planifier, calendrier Jour / Semaine / Mois |
+| Appels | Kanban (glisser-déposer sur ordinateur) et liste, filtres, tri, panneau de détail avec transcription et historique |
+| Planning | Calendrier, plages libres cliquables, suggestions à confirmer, reprogrammation |
+| Clients | Recherche, fiche avec coordonnées, appels et rendez-vous |
+| Réglages | Profil, horaires, gestion des appels, réinitialisation de la démo |
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Structure
 
-## Deploy on Vercel
+```
+src/
+  app/                 Routes (App Router)
+  components/
+    layout/            Barre latérale, barre supérieure, recherche, notifications
+    ui/                Composants génériques (boutons, badges, modales, panneau latéral…)
+    calls/             Kanban, liste, panneau d'appel, actions et dialogues
+    calendar/          Calendrier et dialogues de rendez-vous
+    planning/          Panneau « À planifier »
+    clients/           Liste et fiche client
+    settings/          Formulaire de réglages
+    dashboard/         Tuiles de la vue d'ensemble
+  lib/
+    types.ts           Modèle de données
+    demo-data.ts       Données fictives (relatives à la date du jour)
+    store.ts           Store local, règles métier, persistance localStorage
+    selectors.ts       Données dérivées (décisions, appels à planifier, clients)
+    slots.ts           Créneaux libres et suggestions (simulation)
+    messages.ts        Modèles de SMS
+    format.ts          Dates, heures, téléphones
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Les données de démonstration sont régénérées chaque jour (les réglages sont
+conservés) et peuvent être réinitialisées depuis la page Réglages.

@@ -1,26 +1,71 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
+/*
+ * Design system Astio.
+ * Orange de marque utilisé avec parcimonie : actions principales, éléments
+ * actifs et accents. Les couleurs sémantiques sont distinctes de la marque.
+ */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+
+  --color-brand-50: #fff8eb;
+  --color-brand-100: #ffefcc;
+  --color-brand-200: #ffdd8f;
+  --color-brand-400: #ffbb33;
+  --color-brand-500: #ffaa00;
+  --color-brand-600: #ff9900;
+  --color-brand-700: #c26a00;
+  --color-brand-800: #9a5200;
+
+  --color-canvas: #f7f7f5;
+  --color-surface: #ffffff;
+  --color-line: #e8e7e3;
+  --color-line-strong: #d9d8d3;
+  --color-ink: #1c1b19;
+  --color-ink-soft: #57554f;
+  --color-ink-muted: #8a8780;
+
+  --shadow-card: 0 1px 2px rgb(28 27 25 / 0.04), 0 1px 1px rgb(28 27 25 / 0.02);
+  --shadow-pop: 0 10px 30px -10px rgb(28 27 25 / 0.18), 0 2px 6px rgb(28 27 25 / 0.06);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+:root {
+  color-scheme: light;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-feature-settings: "cv11", "ss01";
+}
+
+.bg-brand-gradient {
+  background-image: linear-gradient(135deg, var(--color-brand-500) 0%, var(--color-brand-600) 100%);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-brand-600);
+  outline-offset: 2px;
+}
+
+@keyframes panel-in {
+  from {
+    transform: translateX(24px);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }

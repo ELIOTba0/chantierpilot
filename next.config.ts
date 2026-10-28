@@ -1,9 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
-  cacheComponents: true,
-  partialPrefetching: true,
+  // Prototype 100 % navigateur : les données vivent dans le store local, le
+  // serveur ne rend qu'un squelette. Cache Components n'apporte rien ici.
   turbopack: {
     rules: {
       "*.css": {
