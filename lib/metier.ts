@@ -63,10 +63,12 @@ export function normaliserUrgence(valeur: string | null | undefined): "haute" | 
 // l'agent n'a plus qu'à lire ce qu'on lui donne.
 // ------------------------------------------------------------------
 
+// Pas de trait d'union : le moteur vocal lit « dix-neuf » comme
+// « dix à neuf », en prenant le tiret pour un intervalle.
 const UNITES = [
   "zéro", "une", "deux", "trois", "quatre", "cinq", "six", "sept", "huit",
   "neuf", "dix", "onze", "douze", "treize", "quatorze", "quinze", "seize",
-  "dix-sept", "dix-huit", "dix-neuf",
+  "dix sept", "dix huit", "dix neuf",
 ];
 
 const DIZAINES: Record<number, string> = {
@@ -80,17 +82,22 @@ function enLettres(n: number): string {
   const u = n % 10;
   if (u === 0) return DIZAINES[d];
   if (u === 1) return `${DIZAINES[d]} et une`;
-  return `${DIZAINES[d]}-${UNITES[u]}`;
+  return `${DIZAINES[d]} ${UNITES[u]}`;
 }
 
-/** « quatorze heures trente », « seize heures », « midi ». */
+/**
+ * « quatorze heures trente », « seize heures », « midi ».
+ *
+ * « midi » et « minuit » ne valent qu'à l'heure pile : « midi trente »
+ * ne se dit pas en français, on dit « douze heures trente ».
+ */
 function heureEnLettres(h: number, m: number): string {
-  if (h === 0 && m === 0) return "minuit";
-  if (h === 12 && m === 0) return "midi";
-
-  const heure = h === 12 ? "midi" : h === 0 ? "minuit" : `${enLettres(h)} heure${h > 1 ? "s" : ""}`;
-  if (m === 0) return heure;
-  return `${heure} ${enLettres(m)}`;
+  if (m === 0) {
+    if (h === 0) return "minuit";
+    if (h === 12) return "midi";
+    return `${enLettres(h)} heure${h > 1 ? "s" : ""}`;
+  }
+  return `${enLettres(h)} heure${h > 1 ? "s" : ""} ${enLettres(m)}`;
 }
 
 const JOURS = ["dimanche", "lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi"];

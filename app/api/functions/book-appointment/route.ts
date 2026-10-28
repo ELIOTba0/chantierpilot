@@ -12,8 +12,9 @@ export const runtime = "nodejs";
  *
  * Le pire scénario du produit, c'est l'agent qui annonce « c'est noté »
  * alors que rien n'a été créé. Ici, si la création échoue, on le dit
- * franchement : la réponse porte reserve: false et l'agent bascule sur
- * la prise de message.
+ * franchement : la réponse porte reserve: false, la fiche existe quand
+ * même en statut « à rappeler », et l'agent bascule sur la prise de
+ * message.
  */
 export async function POST(req: NextRequest) {
   if (!cleFonctionValide(req.headers.get("x-chantierpilot-cle"))) {
@@ -21,9 +22,15 @@ export async function POST(req: NextRequest) {
   }
 
   let a: Record<string, string | boolean | undefined>;
+  let callId: string | null = null;
+
   try {
     const corps = await req.json();
     a = corps.args ?? corps;
+    // Retell joint l'objet call complet à chaque appel de fonction.
+    // On garde l'identifiant pour rattacher la fiche à l'appel quand
+    // le webhook de fin arrivera.
+    callId = (corps.call?.call_id as string) ?? null;
   } catch {
     return NextResponse.json({ reserve: false, raison: "requete_illisible" });
   }
@@ -47,6 +54,29 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ reserve: false, raison: "confirmation_manquante" });
   }
 
+  // --- Idempotence ---------------------------------------------------
+  // Si une réservation existe déjà pour cet appel, on la renvoie au
+  // lieu d'en créer une seconde. Un réseau instable ou un retry ne
+  // doit jamais produire deux rendez-vous pour le même client.
+  if (callId) {
+    const { data: deja } = await db
+      .from("demandes")
+      .select("id, rendez_vous(debut)")
+      .eq("retell_call_id", callId)
+      .eq("statut", "rdv_pris")
+      .maybeSingle();
+
+    if (deja) {
+      const existant = (deja as { rendez_vous?: { debut: string }[] }).rendez_vous?.[0];
+      return NextResponse.json({
+        reserve: true,
+        deja_reserve: true,
+        debut: existant?.debut ?? debut,
+        libelle: creneauEnFrancais(existant?.debut ?? debut),
+      });
+    }
+  }
+
   const { data: plombier, error } = await db
     .from("plombiers")
     .select("id, nom, communes, google_refresh_token, google_calendar_id, actif")
@@ -68,12 +98,12 @@ export async function POST(req: NextRequest) {
   const fin = new Date(new Date(debut).getTime() + dureeMin * 60000).toISOString();
   const adresse = (a.adresse as string) ?? "";
 
-  // 1. La fiche demande — on l'écrit même si l'agenda échoue ensuite.
+  // 1. La fiche demande — écrite même si l'agenda échoue ensuite.
   const { data: demande, error: errDemande } = await db
     .from("demandes")
     .insert({
       plombier_id: plombier.id,
-      appel_id: (a.appel_id as string) ?? null,
+      retell_call_id: callId,
       type_probleme: typeProbleme,
       description_client: (a.description_client as string) ?? null,
       adresse,
@@ -100,6 +130,7 @@ export async function POST(req: NextRequest) {
 
   // 2. L'événement dans l'agenda.
   if (!plombier.google_refresh_token) {
+    await db.from("demandes").update({ statut: "a_rappeler" }).eq("id", demande.id);
     return NextResponse.json({ reserve: false, raison: "agenda_indisponible" });
   }
 

@@ -104,14 +104,23 @@ export async function POST(req: NextRequest) {
     const sur = meilleur.score >= 0.7 && meilleur.type === "housenumber";
 
     if (sur) {
+      const rue = [meilleur.housenumber, meilleur.street]
+        .filter(Boolean)
+        .join(" ");
+
       return NextResponse.json({
         valide: true,
+        // Forme écrite, pour la fiche du plombier.
         adresse_normalisee: meilleur.label,
-        rue: [meilleur.housenumber, meilleur.street].filter(Boolean).join(" "),
+        rue,
         code_postal: meilleur.postcode,
         commune: meilleur.city,
+        // Forme parlée : sans code postal. Personne ne récite
+        // « quarante neuf mille cent » au téléphone.
+        a_dire: `${rue}, à ${meilleur.city}`,
         consigne:
-          "Répète cette adresse normalisée au client et attends sa confirmation.",
+          "Répète au client exactement le contenu de a_dire, puis attends " +
+          "sa confirmation. Ne prononce jamais le code postal.",
       });
     }
 
@@ -119,6 +128,9 @@ export async function POST(req: NextRequest) {
       valide: false,
       raison: meilleur.type === "housenumber" ? "incertain" : "numero_manquant",
       suggestions: candidats.slice(0, 3).map((t) => t.label),
+      suggestions_a_dire: candidats.slice(0, 3).map((t) =>
+        `${[t.housenumber, t.street].filter(Boolean).join(" ") || t.label.replace(/\s*\d{5}.*$/, "")}, à ${t.city}`
+      ),
       consigne:
         meilleur.type === "housenumber"
           ? "Propose ces adresses au client et demande laquelle est la bonne."
