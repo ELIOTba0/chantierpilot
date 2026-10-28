@@ -19,6 +19,77 @@ function clientPour(refreshToken: string): calendar_v3.Calendar {
 }
 
 export type Creneau = { debut: string; fin: string };
+type Plage = { debut: number; fin: number };
+
+/**
+ * Lit les plages occupées de l'agenda.
+ *
+ * On passe par events.list et non par freebusy.query : freebusy exige
+ * une habilitation plus large (calendar.readonly ou calendar.freebusy)
+ * alors que events.list se contente de calendar.events, la seule que
+ * le plombier nous a accordée. Moins de permissions demandées, c'est
+ * aussi plus facile à défendre face à un artisan.
+ */
+async function plagesOccupees(
+  cal: calendar_v3.Calendar,
+  calendarId: string,
+  debut: Date,
+  fin: Date
+): Promise<Plage[]> {
+  const r = await cal.events.list({
+    calendarId,
+    timeMin: debut.toISOString(),
+    timeMax: fin.toISOString(),
+    singleEvents: true,          // développe les événements récurrents
+    orderBy: "startTime",
+    maxResults: 250,
+    timeZone: FUSEAU,
+  });
+
+  const plages: Plage[] = [];
+
+  for (const e of r.data.items ?? []) {
+    // Événement marqué « disponible » : ne bloque pas le plombier.
+    if (e.transparency === "transparent") continue;
+    // Invitation refusée : il n'y va pas.
+    const moi = e.attendees?.find((a) => a.self);
+    if (moi?.responseStatus === "declined") continue;
+
+    if (e.start?.dateTime && e.end?.dateTime) {
+      plages.push({
+        debut: new Date(e.start.dateTime).getTime(),
+        fin: new Date(e.end.dateTime).getTime(),
+      });
+    } else if (e.start?.date && e.end?.date) {
+      // Journée entière : bloque toute la période.
+      plages.push({
+        debut: new Date(`${e.start.date}T00:00:00`).getTime(),
+        fin: new Date(`${e.end.date}T00:00:00`).getTime(),
+      });
+    }
+  }
+
+  return plages;
+}
+
+/**
+ * Arrondit un horaire au prochain quart d'heure rond : :00 ou :30.
+ *
+ * Sans ça, les créneaux tombent à 14h16 ou 15h46 — personne ne
+ * propose un rendez-vous à ces heures-là, et ça s'entend tout de
+ * suite au téléphone.
+ */
+function arrondirAuDemiHeure(ts: number): number {
+  const d = new Date(ts);
+  const m = d.getMinutes();
+  if (m === 0 && d.getSeconds() === 0 && d.getMilliseconds() === 0) return d.getTime();
+  if (m < 30) d.setMinutes(30, 0, 0);
+  else {
+    d.setHours(d.getHours() + 1);
+    d.setMinutes(0, 0, 0);
+  }
+  return d.getTime();
+}
 
 /**
  * Renvoie les créneaux réellement libres, en respectant :
@@ -53,25 +124,13 @@ export async function creneauxLibres(opts: {
   const maintenant = new Date();
   const fin = new Date(maintenant.getTime() + joursAChercher * 86400000);
 
-  const occupe = await cal.freebusy.query({
-    requestBody: {
-      timeMin: maintenant.toISOString(),
-      timeMax: fin.toISOString(),
-      timeZone: FUSEAU,
-      items: [{ id: calendarId }],
-    },
-  });
-
-  const plages = (occupe.data.calendars?.[calendarId]?.busy ?? []).map((p) => ({
-    debut: new Date(p.start!).getTime(),
-    fin: new Date(p.end!).getTime(),
-  }));
+  const plages = await plagesOccupees(cal, calendarId, maintenant, fin);
 
   const dureeMs = dureeMin * 60000;
   const margeMs = margeTrajetMin * 60000;
   const resultats: Creneau[] = [];
 
-  // On avance par pas de 30 minutes sur les jours ouvrés.
+  // On avance par pas de 30 minutes sur les jours travaillés.
   for (let j = 0; j < joursAChercher && resultats.length < maxResultats; j++) {
     const jour = new Date(maintenant.getTime() + j * 86400000);
     const numeroJour = String(jour.getDay()); // 0 = dimanche
@@ -87,8 +146,14 @@ export async function creneauxLibres(opts: {
     const fermeture = new Date(jour);
     fermeture.setHours(hFin, mFin, 0, 0);
 
+    // Jamais de créneau dans les deux heures qui viennent : le plombier
+    // est en intervention et doit pouvoir finir son chantier en cours.
+    const plusTot = arrondirAuDemiHeure(
+      Math.max(ouverture.getTime(), maintenant.getTime() + 2 * 3600000)
+    );
+
     for (
-      let t = Math.max(ouverture.getTime(), maintenant.getTime() + 3600000);
+      let t = plusTot;
       t + dureeMs <= fermeture.getTime() && resultats.length < maxResultats;
       t += 30 * 60000
     ) {
