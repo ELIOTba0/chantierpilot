@@ -63,6 +63,18 @@ export function dureeTexte(min: number | null): string {
   return m ? `${h} h ${m}` : `${h} h`;
 }
 
+/**
+ * Première lettre en capitale, et elle seule.
+ *
+ * La règle CSS « capitalize » met une majuscule à chaque mot : elle
+ * produit « Jeudi 29 Octobre », ce qui est faux en français — ni les
+ * mois ni les jours ne prennent de capitale en milieu de phrase.
+ */
+export function majuscule(texte: string): string {
+  if (!texte) return texte;
+  return texte.charAt(0).toUpperCase() + texte.slice(1);
+}
+
 /** Liens de navigation. Waze d'abord : c'est ce qu'utilisent les artisans. */
 export function lienWaze(adresse: string): string {
   return `https://waze.com/ul?q=${encodeURIComponent(adresse)}&navigate=yes`;

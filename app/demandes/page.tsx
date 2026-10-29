@@ -4,10 +4,11 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { sb, type Demande } from "@/lib/supabase-browser";
 import {
-  LIBELLES_PROBLEME, LIBELLES_STATUT, heure, ilYA, dureeTexte, lienWaze,
+  LIBELLES_PROBLEME, LIBELLES_STATUT, heure, ilYA, dureeTexte, lienWaze, majuscule,
 } from "@/lib/affichage";
 import Entete from "../composants/Entete";
 import Garde from "../composants/Garde";
+import Squelette from "../composants/Squelette";
 import { Erreur, Vide, type ErreurPostgrest } from "../composants/Etat";
 
 export default function Aujourdhui() {
@@ -22,6 +23,24 @@ export default function Aujourdhui() {
 const DATE_LONGUE = new Intl.DateTimeFormat("fr-FR", {
   weekday: "long", day: "numeric", month: "long", timeZone: "Europe/Paris",
 });
+
+/**
+ * La colonne `adresse` contient déjà la commune la plupart du temps :
+ * la BAN renvoie « 2 rue Marmont, Angers ». Recoller la commune
+ * derrière donnait « 2 rue Marmont, Angers, Angers ».
+ */
+function sansDoublon(adresse: string | null, commune: string | null): string | null {
+  if (!commune) return null;
+  if (!adresse) return commune;
+  const a = adresse.toLowerCase();
+  const c = commune.toLowerCase();
+  return a.includes(c) ? null : commune;
+}
+
+function lieu(adresse: string | null, commune: string | null): string {
+  const reste = sansDoublon(adresse, commune);
+  return [adresse, reste].filter(Boolean).join(", ");
+}
 
 function Contenu() {
   const [demandes, setDemandes] = useState<Demande[]>([]);
@@ -84,7 +103,7 @@ function Contenu() {
     return () => { vivant.current = false; sb.removeChannel(canal); };
   }, []);
 
-  if (chargement) return <main className="page" />;
+  if (chargement) return <Squelette />;
 
   const maintenant = Date.now();
   const auj = new Date().toDateString();
@@ -120,7 +139,7 @@ function Contenu() {
 
   return (
     <main className="page">
-      <h1>{DATE_LONGUE.format(new Date())}</h1>
+      <h1>{majuscule(DATE_LONGUE.format(new Date()))}</h1>
       <p className="sous-titre">{resume}</p>
 
       <Erreur e={erreur} />
@@ -160,8 +179,7 @@ function Contenu() {
                         </div>
                         <div className="carte-desc">
                           {LIBELLES_PROBLEME[d.type_probleme ?? "autre"]}
-                          {[d.adresse, d.commune].filter(Boolean).length > 0 &&
-                            ` · ${[d.adresse, d.commune].filter(Boolean).join(", ")}`}
+                          {lieu(d.adresse, d.commune) && ` · ${lieu(d.adresse, d.commune)}`}
                         </div>
                       </div>
                       {d.urgence === "haute" && (
@@ -222,7 +240,8 @@ function Contenu() {
 
 function Hero({ d }: { d: Demande }) {
   const r = d.rendez_vous![0];
-  const destination = [d.adresse, d.commune].filter(Boolean).join(", ");
+  const destination = lieu(d.adresse, d.commune);
+  const communeAPart = sansDoublon(d.adresse, d.commune);
 
   return (
     <div className="hero">
@@ -243,7 +262,7 @@ function Hero({ d }: { d: Demande }) {
           <div style={{ flex: "1 1 240px", minWidth: 0 }}>
             <div className="champ-nom">Adresse</div>
             <div className="champ-valeur">
-              {d.adresse}{d.commune && <><br />{d.commune}</>}
+              {d.adresse}{communeAPart && <><br />{communeAPart}</>}
             </div>
           </div>
         )}

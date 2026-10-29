@@ -797,3 +797,61 @@ input:disabled { background: var(--neutre-fond); color: var(--ink-3); }
   font-variant-numeric: tabular-nums;
   min-height: 60px;
 }
+
+/* ---------------------------------------------------------------
+   Chargement
+   --------------------------------------------------------------- */
+
+.squelette {
+  border-radius: 6px;
+  background: linear-gradient(
+    90deg,
+    var(--line-2) 25%,
+    var(--line) 37%,
+    var(--line-2) 63%
+  );
+  background-size: 400% 100%;
+  animation: squelette-defile 1.4s ease-in-out infinite;
+}
+
+@keyframes squelette-defile {
+  0%   { background-position: 100% 50%; }
+  100% { background-position: 0 50%; }
+}
+
+/* Une animation qui défile en permanence gêne certaines personnes,
+   et le système le signale. On l'arrête sans retirer le repère. */
+@media (prefers-reduced-motion: reduce) {
+  .squelette { animation: none; background: var(--line-2); }
+}
+
+/* ---------------------------------------------------------------
+   Finitions
+   --------------------------------------------------------------- */
+
+/* Les chiffres ne doivent pas danser quand une valeur change. */
+.rdv-heure, .hero-heure, .carte-quand, .bandeau-rdv-heure {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Sur écran tactile, le survol reste collé après un appui. */
+@media (hover: hover) {
+  .carte:hover, .rdv:hover { background: var(--surface); }
+}
+@media (hover: none) {
+  .carte:hover, .rdv:hover { background: transparent; }
+}
+
+/* Un lien ou un bouton pressé doit réagir tout de suite. */
+.bouton:active { transform: translateY(1px); }
+
+/* L'impression d'une fiche, pour le plombier qui travaille encore
+   avec une pochette papier dans la camionnette. */
+@media print {
+  .entete, .barre-basse, .actions, .barre-enregistrer,
+  .retour, .bouton { display: none !important; }
+  .page { max-width: none; padding: 0; }
+  .colonnes { display: block; }
+  .carte-lieu iframe { display: none; }
+  body { background: #FFFFFF; color: #000000; }
+}

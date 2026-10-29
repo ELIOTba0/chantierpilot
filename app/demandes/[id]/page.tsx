@@ -4,12 +4,13 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { sb } from "@/lib/supabase-browser";
 import {
-  LIBELLES_PROBLEME, heure, dureeTexte,
+  LIBELLES_PROBLEME, heure, dureeTexte, majuscule,
   lienWaze, lienGoogleMaps,
 } from "@/lib/affichage";
 import Entete from "../../composants/Entete";
 import Garde from "../../composants/Garde";
 import { Erreur, type ErreurPostgrest } from "../../composants/Etat";
+import Squelette from "../../composants/Squelette";
 
 type Fiche = {
   id: string;
@@ -154,7 +155,7 @@ function Contenu() {
   if (erreur) {
     return <main className="page"><Erreur e={erreur} /></main>;
   }
-  if (!d) return <main className="page" />;
+  if (!d) return <Squelette variante="fiche" />;
 
   const rdv = d.rendez_vous?.[0];
   const destination = [d.adresse, d.commune].filter(Boolean).join(", ");
@@ -166,12 +167,23 @@ function Contenu() {
     ? `Oui, ${client.nb_demandes} demandes`
     : "Non, premier appel";
 
-  // OpenStreetMap : libre, sans clé, et le cadrage se règle à la main.
-  const carte = d.latitude != null && d.longitude != null
-    ? `https://www.openstreetmap.org/export/embed.html?bbox=${
-        d.longitude - 0.0045},${d.latitude - 0.0022},${
-        d.longitude + 0.0045},${d.latitude + 0.0022
-      }&layer=mapnik&marker=${d.latitude},${d.longitude}`
+  // Google Maps, parce que c'est la carte que le plombier reconnaît.
+  //
+  // On passe par maps.google.com/?output=embed plutôt que par l'API
+  // Embed officielle : celle-ci réclame une clé Google Cloud, donc un
+  // compte de facturation. Cette forme-là ne demande rien. Elle n'est
+  // pas documentée par Google et pourrait disparaître — si un jour le
+  // cadre reste blanc, c'est ici qu'il faut regarder.
+  //
+  // Les coordonnées priment sur le texte : elles viennent de la Base
+  // Adresse Nationale, donc du référentiel officiel, pas de
+  // l'interprétation que Google fait d'une chaîne de caractères.
+  const point = d.latitude != null && d.longitude != null
+    ? `${d.latitude},${d.longitude}`
+    : destination;
+
+  const carte = point
+    ? `https://maps.google.com/maps?q=${encodeURIComponent(point)}&z=16&hl=fr&output=embed`
     : null;
 
   return (
@@ -197,9 +209,9 @@ function Contenu() {
         )}
       </div>
 
-      <p className="sous-titre" style={{ textTransform: "capitalize", marginBottom: "2rem" }}>
+      <p className="sous-titre" style={{ marginBottom: "2rem" }}>
         {rdv
-          ? `${DATE_LONGUE.format(new Date(rdv.debut))} · ${heure(rdv.debut)} – ${heure(rdv.fin)}`
+          ? `${majuscule(DATE_LONGUE.format(new Date(rdv.debut)))} · ${heure(rdv.debut)} – ${heure(rdv.fin)}`
           : `Reçue le ${DATE_LONGUE.format(new Date(d.cree_le))}`}
       </p>
 
@@ -300,8 +312,10 @@ function Contenu() {
 
           <div className="carte-lieu">
             {carte && (
-              <iframe src={carte} title={`Carte — ${destination}`} loading="lazy"
-                      referrerPolicy="no-referrer-when-downgrade" />
+              <iframe src={carte} title={`Plan — ${destination}`} loading="lazy"
+                      style={{ height: 260 }}
+                      referrerPolicy="no-referrer-when-downgrade"
+                      allowFullScreen />
             )}
             <div style={{ padding: "1.375rem 1.5rem 1.5rem" }}>
               <div className="champ-nom">Adresse</div>
@@ -321,6 +335,15 @@ function Contenu() {
                           strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
                   <span>Adresse confirmée dans la Base Adresse Nationale.</span>
+                </div>
+              )}
+
+              {destination && (
+                <div style={{ marginTop: ".5rem" }}>
+                  <a href={lienGoogleMaps(destination)} target="_blank" rel="noreferrer"
+                     style={{ fontSize: ".875rem", fontWeight: 600, textDecoration: "none" }}>
+                    Voir le plan en grand →
+                  </a>
                 </div>
               )}
 

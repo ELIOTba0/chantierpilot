@@ -45,6 +45,7 @@ function Contenu() {
   const [erreur, setErreur] = useState<ErreurPostgrest>(null);
   const [envoi, setEnvoi] = useState(false);
   const [verif, setVerif] = useState<Verif>({ etat: "vierge" });
+  const [avertissement, setAvertissement] = useState<string | null>(null);
 
   const [nom, setNom] = useState("");
   const [tel, setTel] = useState("");
@@ -117,6 +118,7 @@ function Contenu() {
 
   async function enregistrer() {
     setErreur(null);
+    setAvertissement(null);
 
     if (!nom.trim() || !adresse.trim() || !qui) {
       setErreur({ message: "Nom, adresse et plombier sont obligatoires." });
@@ -125,100 +127,58 @@ function Contenu() {
 
     setEnvoi(true);
 
-    // Le titulaire de la ligne : c'est lui qui porte les demandes.
-    const titulaire = membres.find((m) => m.role === "gerant") ?? membres[0];
-    if (!titulaire) { setErreur({ message: "Aucun plombier trouvé." }); setEnvoi(false); return; }
-
-    const debutISO = new Date(`${date}T${debut}:00`).toISOString();
-    const finISO = new Date(new Date(debutISO).getTime() + duree * 60000).toISOString();
-
-    // 1. Le client — on le retrouve par son numéro s'il existe déjà.
-    let clientId: string | null = null;
-    if (tel.trim()) {
-      const { data: existant } = await sb
-        .from("clients").select("id").eq("telephone", tel.trim()).maybeSingle();
-      clientId = existant?.id ?? null;
-    }
-    if (!clientId) {
-      const { data: cree, error: errCli } = await sb
-        .from("clients")
-        .insert({
-          entreprise_id: titulaire.entreprise_id,
-          nom: nom.trim(),
-          telephone: tel.trim() || null,
-          adresse: adresse.trim(),
-          commune: commune.trim() || null,
-        })
-        .select("id").single();
-      if (errCli) { setErreur(errCli); setEnvoi(false); return; }
-      clientId = cree.id;
+    // L'écriture passe par le serveur : poser le créneau dans Google
+    // Agenda demande le jeton du plombier, qui ne doit jamais
+    // atteindre un navigateur.
+    const { data: session } = await sb.auth.getSession();
+    const jeton = session.session?.access_token;
+    if (!jeton) {
+      setErreur({ message: "Session expirée. Reconnectez-vous." });
+      setEnvoi(false);
+      return;
     }
 
-    // 2. La demande.
     const ok = verif.etat === "ok";
-    const { data: dem, error: errDem } = await sb
-      .from("demandes")
-      .insert({
-        plombier_id: titulaire.id,
-        client_id: clientId,
-        assigne_a: qui,
-        type_probleme: type,
-        description_client: descr.trim() || null,
+
+    const reponse = await fetch("/api/rendez-vous", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${jeton}`,
+      },
+      body: JSON.stringify({
+        nom: nom.trim(),
+        telephone: tel.trim(),
         adresse: adresse.trim(),
-        commune: commune.trim() || null,
-        dans_zone: true,
+        commune: commune.trim(),
+        type,
+        assigneA: qui,
+        description: descr.trim(),
+        debut: new Date(`${date}T${debut}:00`).toISOString(),
+        dureeMin: duree,
         urgence,
-        duree_estimee_min: duree,
-        nom_client: nom.trim(),
-        telephone_client: tel.trim() || null,
-        statut: "rdv_pris",
-        origine: "manuel",
-        adresse_verifiee: ok,
-        score_adresse: ok ? verif.score : null,
-        adresse_normalisee: ok ? verif.libelle : null,
+        prevenir,
         latitude: ok ? verif.lat : null,
         longitude: ok ? verif.lon : null,
-      })
-      .select("id").single();
-    if (errDem) { setErreur(errDem); setEnvoi(false); return; }
+        score: ok ? verif.score : null,
+        adresseNormalisee: ok ? verif.libelle : null,
+      }),
+    });
 
-    // 3. Le rendez-vous.
-    const { data: rdv, error: errRdv } = await sb
-      .from("rendez_vous")
-      .insert({
-        demande_id: dem.id,
-        plombier_id: titulaire.id,
-        assigne_a: qui,
-        cree_par: titulaire.id,
-        debut: debutISO,
-        fin: finISO,
-        statut: "confirme",
-        origine: "manuel",
-        confirme_par_client: false,
-      })
-      .select("id").single();
-    if (errRdv) { setErreur(errRdv); setEnvoi(false); return; }
+    const corps = await reponse.json().catch(() => ({}));
+    setEnvoi(false);
 
-    // 4. La trace du message au client. Le canal réel dépend du
-    //    réglage de l'entreprise ; tant qu'il vaut « interface »,
-    //    rien n'est envoyé ni facturé.
-    if (prevenir && tel.trim()) {
-      const quand = new Date(debutISO).toLocaleString("fr-FR", {
-        weekday: "long", day: "numeric", month: "long",
-        hour: "2-digit", minute: "2-digit", timeZone: "Europe/Paris",
-      });
-      await sb.from("notifications").insert({
-        entreprise_id: titulaire.entreprise_id,
-        demande_id: dem.id,
-        rendez_vous_id: rdv.id,
-        destinataire: "client",
-        adresse_dest: tel.trim(),
-        canal: "interface",
-        modele: "confirmation",
-        contenu: `Bonjour, votre rendez-vous est confirmé ${quand}, ${adresse.trim()}`
-                 + (commune.trim() ? ` à ${commune.trim()}` : "") + ".",
-        statut: "a_envoyer",
-      });
+    if (!reponse.ok) {
+      setErreur({ message: corps.erreur ?? "Enregistrement impossible." });
+      return;
+    }
+
+    // Le rendez-vous est enregistré dans tous les cas. Si Google a
+    // refusé, on reste sur la page pour le dire : partir en silence
+    // laisserait croire que le créneau est bloqué partout.
+    if (!corps.googleOk && corps.googleMessage) {
+      setAvertissement(corps.googleMessage);
+      return;
     }
 
     router.push("/agenda");
@@ -241,6 +201,19 @@ function Contenu() {
       </p>
 
       <Erreur e={erreur} />
+
+      {avertissement && (
+        <div className="encart-erreur" role="status"
+             style={{ borderColor: "var(--urgent-bord)" }}>
+          <div className="encart-erreur-titre">Enregistré, mais pas dans Google Agenda</div>
+          <div style={{ lineHeight: 1.55 }}>{avertissement}</div>
+          <div style={{ marginTop: ".75rem" }}>
+            <Link className="bouton" href="/agenda" style={{ minHeight: 44 }}>
+              Voir le planning
+            </Link>
+          </div>
+        </div>
+      )}
 
       <div className="colonnes">
         <div className="colonne-large">
@@ -420,12 +393,12 @@ function Contenu() {
 
           <div className="encadre" style={{ marginTop: "1.25rem",
                                             background: "var(--neutre-fond)" }}>
-            <h2 style={{ marginTop: 0, color: "var(--ink-2)" }}>Attention</h2>
+            <h2 style={{ marginTop: 0, color: "var(--ink-2)" }}>Ce qui se passe</h2>
             <p style={{ margin: 0, fontSize: ".875rem", lineHeight: 1.6 }}>
-              Ce rendez-vous est enregistré dans ChantierPilot mais pas encore
-              écrit dans votre agenda Google. L&apos;assistant téléphonique lit
-              Google pour ses disponibilités : il pourra donc proposer ce
-              créneau tant que la synchronisation n&apos;est pas en place.
+              Le rendez-vous est écrit dans ChantierPilot et posé dans
+              l&apos;agenda Google du plombier choisi. L&apos;assistant lisant
+              cet agenda pour ses disponibilités, il cessera aussitôt de
+              proposer ce créneau au téléphone.
             </p>
           </div>
         </aside>
