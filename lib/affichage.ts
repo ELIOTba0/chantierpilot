@@ -105,3 +105,99 @@ export function lienGoogleMaps(adresse: string): string {
 export function lienAppleMaps(adresse: string): string {
   return `https://maps.apple.com/?daddr=${encodeURIComponent(adresse)}`;
 }
+
+// ------------------------------------------------------------------
+// Statuts du tableau de bord. Chaque libellé a un « ton » qui choisit
+// la couleur de la puce : accent (fait, positif), urgent (action
+// attendue), neutre (le reste). Trois couleurs, pas une par statut :
+// le plombier doit voir d'un coup d'œil ce qui attend une action.
+// ------------------------------------------------------------------
+
+export type Ton = "accent" | "urgent" | "neutre" | "attenue";
+export type Libelle = { libelle: string; ton: Ton };
+
+/** Ce qu'il reste à faire après l'appel (v_appels.traitement). */
+export const TRAITEMENT_APPEL: Record<string, Libelle> = {
+  a_rappeler: { libelle: "Rappel nécessaire", ton: "urgent" },
+  traite:     { libelle: "Traité", ton: "accent" },
+  en_cours:   { libelle: "En cours", ton: "neutre" },
+  echec:      { libelle: "Appel échoué", ton: "neutre" },
+};
+
+/** Ce que l'appel a produit (v_appels.resultat). */
+export const RESULTAT_APPEL: Record<string, Libelle> = {
+  rdv_pris:       { libelle: "RDV pris", ton: "accent" },
+  a_rappeler:     { libelle: "À rappeler", ton: "urgent" },
+  renseigne:      { libelle: "Renseigné", ton: "neutre" },
+  hors_perimetre: { libelle: "Hors secteur", ton: "neutre" },
+  sans_suite:     { libelle: "Sans suite", ton: "attenue" },
+  transfere:      { libelle: "Transféré", ton: "neutre" },
+};
+export const RESULTAT_INCONNU: Libelle = { libelle: "Non déterminé", ton: "attenue" };
+
+export const STATUT_RAPPEL: Record<string, Libelle> = {
+  a_faire:   { libelle: "À faire", ton: "urgent" },
+  reporte:   { libelle: "Reporté", ton: "neutre" },
+  effectue:  { libelle: "Effectué", ton: "accent" },
+  abandonne: { libelle: "Abandonné", ton: "attenue" },
+};
+
+export const PRIORITE: Record<string, Libelle> = {
+  haute:   { libelle: "Priorité haute", ton: "urgent" },
+  moyenne: { libelle: "Priorité moyenne", ton: "neutre" },
+  basse:   { libelle: "Priorité basse", ton: "attenue" },
+};
+
+/** v_rendez_vous.statut_affiche : jamais « confirmé » sans preuve. */
+export const STATUT_RDV: Record<string, Libelle> = {
+  confirme:   { libelle: "Confirmé", ton: "accent" },
+  en_attente: { libelle: "En attente", ton: "urgent" },
+  annule:     { libelle: "Annulé", ton: "attenue" },
+  termine:    { libelle: "Terminé", ton: "neutre" },
+  echec:      { libelle: "Échec de création", ton: "urgent" },
+};
+
+export const STATUT_ENTREPRISE: Record<string, Libelle> = {
+  actif:    { libelle: "Actif", ton: "accent" },
+  essai:    { libelle: "Essai", ton: "neutre" },
+  suspendu: { libelle: "Suspendu", ton: "urgent" },
+  resilie:  { libelle: "Résilié", ton: "attenue" },
+};
+
+export const ROLE_PLOMBIER: Record<string, string> = {
+  titulaire: "Titulaire",
+  technicien: "Technicien",
+  secretariat: "Secrétariat",
+};
+
+export function libelleProbleme(type: string | null | undefined): string {
+  if (!type) return "Non précisé";
+  return LIBELLES_PROBLEME[type] ?? type;
+}
+
+/** « 3 min 20 » */
+export function dureeAppel(s: number | null | undefined): string {
+  if (!s) return "—";
+  const m = Math.floor(s / 60);
+  const r = s % 60;
+  return m ? `${m} min ${String(r).padStart(2, "0")}` : `${r} s`;
+}
+
+/**
+ * Découpe une transcription « Assistant : … / Client : … » en tours
+ * de parole. Retell écrit tantôt « Agent », tantôt « Assistant ».
+ * Si rien ne correspond, renvoie null : on affiche alors le texte brut
+ * plutôt que de perdre l'information.
+ */
+export function tours(transcript: string): { qui: "assistant" | "client"; texte: string }[] | null {
+  const lignes = transcript.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+  const sortie: { qui: "assistant" | "client"; texte: string }[] = [];
+
+  for (const ligne of lignes) {
+    const m = /^(assistant|agent|client|user|utilisateur)\s*:\s*(.*)$/i.exec(ligne);
+    if (!m) return null;
+    const qui = /^(assistant|agent)$/i.test(m[1]) ? "assistant" : "client";
+    sortie.push({ qui, texte: m[2] });
+  }
+  return sortie.length > 0 ? sortie : null;
+}

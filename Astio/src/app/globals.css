@@ -1,0 +1,73 @@
+@import "tailwindcss";
+
+/*
+ * Design system Astio.
+ * Inspiré des interfaces Apple : surfaces séparées par la lumière (ombres très
+ * légères) plutôt que par des bordures, typographie système, un seul accent.
+ * L'orange de marque est réservé aux actions principales et aux éléments actifs.
+ */
+@theme inline {
+  --font-sans: -apple-system, BlinkMacSystemFont, var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+
+  --color-brand-50: #fff8eb;
+  --color-brand-100: #ffefcc;
+  --color-brand-200: #ffdd8f;
+  --color-brand-300: #ffcc5c;
+  --color-brand-400: #ffbb33;
+  --color-brand-500: #ffaa00;
+  --color-brand-600: #ff9900;
+  --color-brand-700: #c26a00;
+  --color-brand-800: #9a5200;
+
+  --color-canvas: #f5f5f7;
+  --color-surface: #ffffff;
+  --color-line: #e8e8ed;
+  --color-line-strong: #d2d2d7;
+  --color-ink: #1d1d1f;
+  --color-ink-soft: #424245;
+  --color-ink-muted: #6e6e73;
+
+  --shadow-card: 0 0 0 0.5px rgb(0 0 0 / 0.05), 0 1px 3px rgb(0 0 0 / 0.05);
+  --shadow-pop: 0 0 0 0.5px rgb(0 0 0 / 0.06), 0 12px 32px -8px rgb(0 0 0 / 0.16);
+}
+
+:root {
+  color-scheme: light;
+}
+
+body {
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  letter-spacing: -0.006em;
+}
+
+.bg-brand-gradient {
+  background-image: linear-gradient(135deg, var(--color-brand-500) 0%, var(--color-brand-600) 100%);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-brand-600);
+  outline-offset: 2px;
+}
+
+@keyframes panel-in {
+  from {
+    transform: translateX(24px);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
