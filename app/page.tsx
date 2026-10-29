@@ -3,6 +3,17 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { sb } from "@/lib/supabase-browser";
+import { chargerSession } from "@/lib/donnees";
+
+/** Après connexion : l'administrateur vers l'administration, le plombier vers sa journée. */
+async function espaceDuCompte(): Promise<string> {
+  try {
+    const s = await chargerSession();
+    return s.role === "admin" ? "/admin" : "/demandes";
+  } catch {
+    return "/demandes";
+  }
+}
 
 /**
  * Connexion par code à six chiffres reçu par e-mail.
@@ -28,7 +39,7 @@ export default function Connexion() {
 
   useEffect(() => {
     sb.auth.getSession().then(({ data }) => {
-      if (data.session) router.replace("/demandes");
+      if (data.session) espaceDuCompte().then((v) => router.replace(v));
     });
   }, [router]);
 
@@ -81,7 +92,7 @@ export default function Connexion() {
     setOccupe(false);
     if (ok) {
       // On garde le verrou : la page va changer.
-      router.replace("/demandes");
+      router.replace(await espaceDuCompte());
     } else {
       enCours.current = false;
       setErreur("Code incorrect ou expiré. Demandez-en un nouveau.");

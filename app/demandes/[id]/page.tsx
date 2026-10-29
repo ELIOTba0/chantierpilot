@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { sb } from "@/lib/supabase-browser";
 import {
   LIBELLES_PROBLEME, heure, dureeTexte,
-  lienWaze, lienGoogleMaps,
+  lienWaze, lienGoogleMaps, tours,
 } from "@/lib/affichage";
 import Entete from "../../composants/Entete";
 import Garde from "../../composants/Garde";
@@ -54,25 +54,6 @@ const LIBELLES_URGENCE: Record<string, string> = {
   moyenne: "Urgence modérée",
   basse: "Pas d'urgence",
 };
-
-/**
- * Découpe une transcription « Assistant : … / Client : … » en tours
- * de parole. Retell écrit tantôt « Agent », tantôt « Assistant ».
- * Si rien ne correspond, on rend le texte brut plutôt que de perdre
- * l'information.
- */
-function tours(transcript: string): { qui: "assistant" | "client"; texte: string }[] | null {
-  const lignes = transcript.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
-  const sortie: { qui: "assistant" | "client"; texte: string }[] = [];
-
-  for (const ligne of lignes) {
-    const m = /^(assistant|agent|client|user|utilisateur)\s*:\s*(.*)$/i.exec(ligne);
-    if (!m) return null;
-    const qui = /^(assistant|agent)$/i.test(m[1]) ? "assistant" : "client";
-    sortie.push({ qui, texte: m[2] });
-  }
-  return sortie.length > 0 ? sortie : null;
-}
 
 export default function Detail() {
   return <Garde><Entete /><Contenu /></Garde>;

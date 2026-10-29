@@ -4,11 +4,19 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { sb, type Demande } from "@/lib/supabase-browser";
 import {
-  LIBELLES_PROBLEME, LIBELLES_STATUT, heure, ilYA, dureeTexte, lienWaze,
+  LIBELLES_PROBLEME, PRIORITE, RESULTAT_APPEL, RESULTAT_INCONNU, TRAITEMENT_APPEL,
+  heure, ilYA, dureeTexte, libelleProbleme, lienWaze,
 } from "@/lib/affichage";
+import {
+  chargerIndicateurs, listerAppels, listerRappels,
+  type Appel, type Indicateurs as Chiffres, type Rappel,
+} from "@/lib/donnees";
+import { dateHeure } from "@/lib/dates";
 import Entete from "../composants/Entete";
 import Garde from "../composants/Garde";
 import { Erreur, Vide, type ErreurPostgrest } from "../composants/Etat";
+import { Indicateur, Indicateurs, Puce } from "../composants/Ui";
+import CalendrierSemaine from "../composants/CalendrierSemaine";
 
 export default function Aujourdhui() {
   return (
@@ -28,6 +36,9 @@ function Contenu() {
   const [erreur, setErreur] = useState<ErreurPostgrest>(null);
   const [indices, setIndices] = useState<string[]>([]);
   const [chargement, setChargement] = useState(true);
+  const [chiffres, setChiffres] = useState<Chiffres | null>(null);
+  const [rappels, setRappels] = useState<Rappel[]>([]);
+  const [recents, setRecents] = useState<Appel[]>([]);
   const vivant = useRef(true);
 
   useEffect(() => {
@@ -54,6 +65,22 @@ function Contenu() {
       const lignes = (data as Demande[]) ?? [];
       setDemandes(lignes);
 
+      // Indicateurs, rappels et appels récents : calculés en base, sur
+      // le seul périmètre de l'entreprise (RLS).
+      try {
+        const [c, r, a] = await Promise.all([
+          chargerIndicateurs(),
+          listerRappels({ vue: "ouverts" }),
+          listerAppels({ ordre: "recent" }),
+        ]);
+        if (!vivant.current) return;
+        setChiffres(c);
+        setRappels(r.lignes.slice(0, 6));
+        setRecents(a.lignes.slice(0, 6));
+      } catch {
+        // Les blocs concernés restent vides ; l'écran du jour s'affiche.
+      }
+
       if (lignes.length === 0 && process.env.NODE_ENV !== "production") {
         const total = await sb.from("demandes").select("id", { count: "exact", head: true });
         setIndices([
@@ -79,6 +106,9 @@ function Contenu() {
       .on("postgres_changes",
           { event: "*", schema: "public", table: "demandes" },
           () => charger())
+      .on("postgres_changes",
+          { event: "*", schema: "public", table: "appels" },
+          () => charger())
       .subscribe();
 
     return () => { vivant.current = false; sb.removeChannel(canal); };
@@ -99,9 +129,6 @@ function Contenu() {
     (d) => new Date(d.rendez_vous![0].debut).getTime() >= maintenant
   );
 
-  const aTraiter = demandes.filter(
-    (d) => d.statut === "nouvelle" || d.statut === "a_rappeler"
-  );
 
   const faites = duJour.filter(
     (d) => new Date(d.rendez_vous![0].fin).getTime() < maintenant
@@ -113,10 +140,13 @@ function Contenu() {
       : `${duJour.length} intervention${duJour.length > 1 ? "s" : ""}${
           faites > 0 ? `, dont ${faites} déjà faite${faites > 1 ? "s" : ""}` : ""
         }.`,
-    aTraiter.length > 0
-      ? `${aTraiter.length} demande${aTraiter.length > 1 ? "s" : ""} en attente de votre rappel.`
+    chiffres && chiffres.rappels_en_attente > 0
+      ? `${chiffres.rappels_en_attente} personne${chiffres.rappels_en_attente > 1 ? "s" : ""} à rappeler.`
       : "",
   ].filter(Boolean).join(" ");
+
+  const premier = rappels[0];
+  const enRetard = chiffres?.rappels_en_retard ?? 0;
 
   return (
     <main className="page">
@@ -126,86 +156,108 @@ function Contenu() {
       <Erreur e={erreur} />
       {demandes.length === 0 && <Vide indices={indices} />}
 
+      <div className="cartes-action">
+        <Link href="/appels" className="carte-action">
+          <span className="carte-action-titre">Appels reçus aujourd&apos;hui</span>
+          <span className="carte-action-valeur">{chiffres?.appels_aujourdhui ?? "—"}</span>
+          <span className="carte-action-texte">
+            {!chiffres ? "" : chiffres.appels_aujourdhui === 0
+              ? "Aucun appel pour l'instant aujourd'hui."
+              : `${chiffres.appels_aujourdhui_traites} traité${chiffres.appels_aujourdhui_traites > 1 ? "s" : ""} par l'assistant sans vous solliciter.`}
+          </span>
+          <span className="carte-action-lien">Voir les appels →</span>
+        </Link>
+
+        <Link href="/rappels" className="carte-action" data-ton={enRetard > 0 ? "urgent" : undefined}>
+          <span className="carte-action-titre">À rappeler</span>
+          <span className="carte-action-valeur">{chiffres?.rappels_en_attente ?? "—"}</span>
+          <span className="carte-action-texte">
+            {premier
+              ? `Commencez par ${premier.nom_client ?? "l'appelant inconnu"}${premier.raison ? ` : ${premier.raison.charAt(0).toLowerCase()}${premier.raison.slice(1)}` : "."}`
+              : "Personne n'attend de rappel."}
+            {enRetard > 0 && ` ${enRetard} rappel${enRetard > 1 ? "s" : ""} en retard.`}
+          </span>
+          <span className="carte-action-lien">Traiter les rappels →</span>
+        </Link>
+      </div>
+
+      <Indicateurs>
+        <Indicateur titre="Appels reçus" valeur={chiffres?.appels_7j ?? null}
+                    detail="7 derniers jours" href="/appels" />
+        <Indicateur titre="RDV pris par l'IA" valeur={chiffres?.rdv_ia_7j ?? null}
+                    detail={chiffres ? `${chiffres.rdv_a_venir} à venir` : undefined} href="/rendez-vous" />
+        <Indicateur titre="À rappeler" valeur={chiffres?.rappels_en_attente ?? null}
+                    detail={chiffres && chiffres.rappels_en_retard > 0
+                      ? `dont ${chiffres.rappels_en_retard} en retard` : "en attente"}
+                    href="/rappels" ton={chiffres && chiffres.rappels_en_retard > 0 ? "urgent" : undefined} />
+        <Indicateur titre="Appels traités" valeur={chiffres?.appels_traites_7j ?? null}
+                    detail={chiffres && chiffres.appels_7j > 0
+                      ? `${Math.round(100 * chiffres.appels_traites_7j / chiffres.appels_7j)} % des appels de la semaine`
+                      : "7 derniers jours"} href="/appels" />
+      </Indicateurs>
+
+      {prochain && (
+        <>
+          <p className="titre-section">Prochaine intervention</p>
+          <Hero d={prochain} />
+        </>
+      )}
+
+      <h2>Cette semaine</h2>
+      <CalendrierSemaine
+        lien={(r) => (r.demande_id ? `/demandes/${r.demande_id}` : "/rendez-vous")}
+        actions={<Link className="bouton" data-taille="petit" href="/agenda">Planning complet</Link>} />
+
       <div className="colonnes">
         <div className="colonne-large">
-
-          {prochain ? (
-            <>
-              <p className="titre-section">Prochaine intervention</p>
-              <Hero d={prochain} />
-            </>
-          ) : duJour.length > 0 ? (
-            <div className="encadre">
-              <h2>Journée terminée</h2>
-              Plus rien de prévu aujourd&apos;hui. L&apos;assistant continue de
-              prendre les appels.
-            </div>
-          ) : null}
-
-          {duJour.length > 0 && (
-            <>
-              <h2>La journée</h2>
-              <div className="liste">
-                {duJour.map((d) => {
-                  const r = d.rendez_vous![0];
-                  const passe = new Date(r.fin).getTime() < maintenant;
-                  return (
-                    <Link key={d.id} href={`/demandes/${d.id}`} className="rdv"
-                          data-passe={passe}
-                          data-prochain={prochain?.id === d.id}>
-                      <div className="rdv-heure">{heure(r.debut)}</div>
-                      <div className="rdv-corps">
-                        <div className="carte-titre">
-                          {d.nom_client ?? LIBELLES_PROBLEME[d.type_probleme ?? "autre"]}
-                        </div>
-                        <div className="carte-desc">
-                          {LIBELLES_PROBLEME[d.type_probleme ?? "autre"]}
-                          {[d.adresse, d.commune].filter(Boolean).length > 0 &&
-                            ` · ${[d.adresse, d.commune].filter(Boolean).join(", ")}`}
-                        </div>
-                      </div>
-                      {d.urgence === "haute" && (
-                        <span className="puce" data-ton="haute">Urgent</span>
-                      )}
-                      {passe && <span className="discret">Terminé</span>}
-                    </Link>
-                  );
-                })}
-              </div>
-            </>
-          )}
-        </div>
-
-        <aside className="colonne-cote">
-          <h2 style={{ marginTop: 0 }}>À rappeler</h2>
-
-          {aTraiter.length === 0 ? (
-            <div className="vide"><p>Rien en attente.</p></div>
+          <h2>Derniers appels</h2>
+          {recents.length === 0 ? (
+            <div className="vide"><p>Aucun appel ces 7 derniers jours.</p></div>
           ) : (
             <div className="liste">
-              {aTraiter.slice(0, 6).map((d) => (
-                <Link key={d.id} href={`/demandes/${d.id}`} className="carte"
-                      style={{ gap: 0, display: "block" }}>
+              {recents.map((a) => (
+                <Link key={a.id} href={`/appels/${a.id}`} className="carte" style={{ display: "block" }}>
                   <div className="carte-haut">
-                    <span className="carte-titre">
-                      {d.nom_client ?? LIBELLES_PROBLEME[d.type_probleme ?? "autre"]}
-                    </span>
-                    <span className="carte-quand">{ilYA(d.cree_le)}</span>
+                    <span className="carte-titre">{a.nom_appelant ?? a.numero_appelant ?? "Appelant inconnu"}</span>
+                    <span className="carte-quand">{dateHeure(a.date_appel)}</span>
                   </div>
-                  <div className="carte-desc">
-                    {d.description_client ??
-                      LIBELLES_PROBLEME[d.type_probleme ?? "autre"]}
-                  </div>
+                  <div className="carte-desc">{a.resume ?? libelleProbleme(a.motif)}</div>
                   <div className="carte-bas">
-                    <span className="puce" data-ton={d.statut}>
-                      {LIBELLES_STATUT[d.statut] ?? d.statut}
-                    </span>
-                    {d.commune && <span>{d.commune}</span>}
+                    <Puce l={TRAITEMENT_APPEL[a.traitement]} />
+                    <Puce l={a.resultat ? RESULTAT_APPEL[a.resultat] ?? RESULTAT_INCONNU : RESULTAT_INCONNU} />
                   </div>
                 </Link>
               ))}
             </div>
           )}
+          <p><Link href="/appels">Tout l&apos;historique →</Link></p>
+        </div>
+
+        <aside className="colonne-cote">
+          <h2 style={{ marginTop: 0 }}>À rappeler en priorité</h2>
+
+          {rappels.length === 0 ? (
+            <div className="vide"><p>Personne à rappeler.</p></div>
+          ) : (
+            <div className="liste">
+              {rappels.map((r) => (
+                <Link key={r.id} href={r.appel_id ? `/appels/${r.appel_id}` : "/rappels"} className="carte"
+                      style={{ gap: 0, display: "block" }}>
+                  <div className="carte-haut">
+                    <span className="carte-titre">{r.nom_client ?? "Appelant inconnu"}</span>
+                    <span className="carte-quand">{ilYA(r.date_appel)}</span>
+                  </div>
+                  <div className="carte-desc">{r.raison}</div>
+                  <div className="carte-bas">
+                    {r.en_retard && <span className="puce" data-ton="urgent">En retard</span>}
+                    {r.priorite && <Puce l={PRIORITE[r.priorite]} />}
+                    <span>{libelleProbleme(r.motif)}</span>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
+          <p><Link href="/rappels">Tous les rappels →</Link></p>
 
           <div className="encadre" style={{ marginTop: "2.5rem" }}>
             <h2 style={{ marginTop: 0 }}>L&apos;assistant</h2>
