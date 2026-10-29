@@ -151,6 +151,9 @@ function Contenu() {
                   onClick={() => setDecalage(decalage + 1)}>
             Semaine suivante
           </button>
+          <Link className="bouton" style={{ minHeight: 48 }} href="/rendez-vous">
+            Vue liste
+          </Link>
           <Link className="bouton" data-style="plein" href="/rendez-vous/nouveau"
                 style={{ minHeight: 48 }}>
             <svg width="17" height="17" viewBox="0 0 20 20" fill="none" aria-hidden="true">

@@ -395,7 +395,9 @@ select
   coalesce(r.ouverts, 0)                  as rappels_ouverts,
   d.id                                    as demande_id,
   d.urgence,
-  a.client_id
+  a.client_id,
+  -- Chiffres seuls, pour chercher « 0639 » dans « 06 39 98 … ».
+  regexp_replace(coalesce(a.numero_appelant, ''), '\D', '', 'g') as numero_chiffres
 from appels a
 join plombiers p           on p.id = a.plombier_id
 left join entreprises e    on e.id = p.entreprise_id
@@ -447,7 +449,8 @@ select
   d.description_client,
   d.adresse,
   d.commune,
-  d.urgence
+  d.urgence,
+  regexp_replace(coalesce(d.telephone_client, ''), '\D', '', 'g') as telephone_chiffres
 from rendez_vous rv
 join plombiers p           on p.id = rv.plombier_id
 left join plombiers pa     on pa.id = rv.assigne_a
@@ -464,7 +467,10 @@ select
   coalesce(a.debut, a.cree_le, d.cree_le, r.cree_le) as date_appel,
   r.statut in ('a_faire', 'reporte')      as ouvert,
   r.statut in ('a_faire', 'reporte') and r.echeance is not null
-    and r.echeance < now()                as en_retard
+    and r.echeance < now()                as en_retard,
+  regexp_replace(coalesce(r.telephone, ''), '\D', '', 'g') as telephone_chiffres,
+  case r.priorite when 'haute' then 1 when 'moyenne' then 2 when 'basse' then 3 else 4 end
+                                          as rang_priorite
 from rappels r
 join plombiers p           on p.id = r.plombier_id
 left join entreprises e    on e.id = p.entreprise_id

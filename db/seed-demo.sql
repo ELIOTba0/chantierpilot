@@ -245,9 +245,23 @@ on conflict (id) do nothing;
 
 -- Deux rendez-vous saisis à la main par le plombier (pas par l'IA),
 -- pour montrer la distinction dans les listes.
+insert into demandes (id, plombier_id, client_id, type_probleme, description_client, adresse,
+                      commune, dans_zone, urgence, duree_estimee_min, nom_client, telephone_client,
+                      statut, origine, cree_le)
+select pg_temp.id('demo-demande-manuel-' || k), pg_temp.id('demo-plombier-1'), null,
+       (array['entretien_chaudiere', 'devis'])[k],
+       '[Démo] Rendez-vous pris directement par le plombier.',
+       (array['9 rue des Vignes', '22 quai de la Maine'])[k], 'Angers', true, 'basse', 120,
+       (array['M. Vasseur', 'Mme Weber'])[k],
+       (array['01 99 00 20 01', '01 99 00 20 02'])[k],
+       'rdv_pris', 'manuel', now() - interval '1 day'
+from generate_series(1, 2) k
+on conflict (id) do nothing;
+
 insert into rendez_vous (id, demande_id, plombier_id, assigne_a, debut, fin, statut, origine,
                          confirme_par_client, cree_le)
-select pg_temp.id('demo-rdv-manuel-' || k), null, pg_temp.id('demo-plombier-1'),
+select pg_temp.id('demo-rdv-manuel-' || k), pg_temp.id('demo-demande-manuel-' || k),
+       pg_temp.id('demo-plombier-1'),
        pg_temp.id('demo-plombier-' || k),
        (date_trunc('day', now() at time zone 'Europe/Paris')
         + make_interval(days => k + 1, hours => 10)) at time zone 'Europe/Paris',

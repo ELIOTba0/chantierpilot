@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { sb, type Plombier } from "@/lib/supabase-browser";
 import Entete from "../composants/Entete";
-import Garde from "../composants/Garde";
+import Garde, { useSession } from "../composants/Garde";
 
 const JOURS: [string, string][] = [
   ["1", "Lundi"], ["2", "Mardi"], ["3", "Mercredi"], ["4", "Jeudi"],
@@ -50,6 +50,7 @@ export default function Reglages() {
 }
 
 function Contenu() {
+  const session = useSession();
   const [p, setP] = useState<Plombier | null>(null);
   const [semaine, setSemaine] = useState<Record<string, Journee>>({});
   const [communes, setCommunes] = useState("");
@@ -61,6 +62,8 @@ function Contenu() {
       const { data } = await sb
         .from("plombiers")
         .select("id, nom, entreprise, email, telephone, ville, communes, horaires")
+        // Ses collègues sont aussi lisibles : on ne prend que sa ligne.
+        .eq("id", session.plombier!.id)
         .single();
       if (!data) return;
       const pl = data as Plombier;
@@ -70,7 +73,7 @@ function Contenu() {
       setSemaine(s);
       setCommunes((pl.communes ?? []).join(", "));
     })();
-  }, []);
+  }, [session]);
 
   function maj(cle: string, champ: keyof Journee, valeur: string | boolean) {
     setSemaine((s) => ({ ...s, [cle]: { ...s[cle], [champ]: valeur } }));
