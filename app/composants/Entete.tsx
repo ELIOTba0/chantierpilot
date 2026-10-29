@@ -7,6 +7,7 @@ import { sb } from "@/lib/supabase-browser";
 import { chargerIndicateurs, chargerIndicateursPlateforme } from "@/lib/donnees";
 import { useSession, type Espace } from "./Garde";
 import { EVENEMENT_RECHERCHE } from "./ListeAppels";
+import Guide from "./Guide";
 
 /**
  * Navigation : barre latérale sur ordinateur, barre du bas sur
@@ -170,6 +171,8 @@ export default function Entete() {
           </button>
         </div>
       </header>
+
+      <Guide espace={espace} />
 
       <nav className="barre-basse" aria-label="Navigation principale">
         {onglets.map((o) => (

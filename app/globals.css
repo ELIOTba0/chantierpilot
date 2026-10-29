@@ -1411,3 +1411,74 @@ a.lien-ligne:hover { color: var(--accent); text-decoration: underline; }
 @media (max-width: 520px) {
   .barre-haut-marque { font-size: 0; gap: 0; }
 }
+
+/* Guide intégré (bulle d'aide) */
+
+.guide-bouton {
+  position: fixed; right: 1.5rem; bottom: 1.5rem; z-index: 30;
+  display: inline-flex; align-items: center; gap: .5rem;
+  min-height: 46px; padding: 0 1.125rem 0 .9375rem;
+  border: 0; border-radius: 999px;
+  background: var(--accent); color: #fff;
+  font: inherit; font-size: .9375rem; font-weight: 600; cursor: pointer;
+  box-shadow: 0 6px 20px rgba(15, 107, 98, .28);
+}
+.guide-bouton:hover { background: var(--accent-sombre); }
+.guide {
+  position: fixed; right: 1.5rem; bottom: 5.25rem; z-index: 30;
+  width: min(380px, calc(100vw - 2rem)); max-height: min(620px, calc(100vh - 7rem));
+  display: flex; flex-direction: column;
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-l);
+  box-shadow: 0 18px 48px rgba(20, 32, 30, .18);
+  overflow: hidden;
+}
+.guide-tete {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: .75rem;
+  padding: .9375rem 1rem .875rem 1.125rem; border-bottom: 1px solid var(--line);
+}
+.guide-tete strong { display: block; font-size: .9375rem; }
+.guide-tete span { font-size: .75rem; color: var(--ink-2); }
+.guide-fermer {
+  width: 32px; height: 32px; border: 0; border-radius: 8px; background: transparent;
+  color: var(--ink-2); font-size: 1.375rem; line-height: 1; cursor: pointer;
+}
+.guide-fermer:hover { background: var(--neutre-fond); }
+.guide-fil { flex: 1 1 auto; overflow-y: auto; padding: 1rem; display: flex; flex-direction: column; gap: .75rem; }
+.guide-bulle {
+  max-width: 92%; padding: .75rem .875rem; border-radius: 12px;
+  font-size: .875rem; line-height: 1.55;
+}
+.guide-bulle p { margin: 0 0 .5rem; }
+.guide-bulle p:last-child { margin-bottom: 0; }
+.guide-bulle[data-de="guide"] { align-self: flex-start; background: var(--neutre-fond); border-top-left-radius: 4px; }
+.guide-bulle[data-de="vous"] { align-self: flex-end; background: var(--accent); color: #fff; border-top-right-radius: 4px; }
+.guide-titre { font-weight: 650; }
+.guide-discret { color: var(--ink-2); font-size: .8125rem; }
+.guide-liens { display: flex; flex-wrap: wrap; gap: .25rem .875rem; margin: .25rem 0 .5rem; }
+.guide-liens a { font-weight: 600; font-size: .8125rem; color: var(--accent); text-decoration: none; }
+.guide-choix { display: flex; flex-direction: column; align-items: flex-start; gap: .375rem; margin-top: .25rem; }
+.guide-choix button {
+  padding: .4375rem .75rem; border: 1px solid var(--accent-bord); border-radius: 999px;
+  background: var(--surface); color: var(--accent-sombre);
+  font: inherit; font-size: .8125rem; font-weight: 500; text-align: left; cursor: pointer;
+}
+.guide-choix button:hover { border-color: var(--accent); }
+.guide-saisie { display: flex; gap: .5rem; padding: .75rem; border-top: 1px solid var(--line); }
+.guide-saisie input {
+  flex: 1 1 auto; min-width: 0; min-height: 40px; padding: 0 .75rem;
+  border: 1px solid var(--bord-champ); border-radius: 9px;
+  background: var(--surface); color: var(--ink); font: inherit; font-size: .875rem;
+}
+
+@media (max-width: 960px) {
+  .guide-bouton { right: 1rem; bottom: calc(5.25rem + env(safe-area-inset-bottom)); min-height: 42px; }
+  .guide-bouton span { display: none; }
+  .guide-bouton { padding: 0 .6875rem; }
+  .guide-bouton[aria-expanded="true"] { display: none; }
+  .guide {
+    right: .5rem; left: .5rem; width: auto;
+    bottom: calc(4.75rem + env(safe-area-inset-bottom));
+    max-height: calc(100vh - 8.5rem);
+  }
+  .guide-saisie input { font-size: 16px; }
+}

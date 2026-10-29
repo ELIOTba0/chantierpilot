@@ -87,7 +87,7 @@ Deux espaces, une même application :
 
 | Espace | Pour qui | Pages |
 |---|---|---|
-| Plombier (`user`) | un plombier, limité à **son** entreprise | Vue d'ensemble (`/demandes`), Appels, À rappeler, Rendez-vous (liste + calendrier), Réglages |
+| Plombier (`user`) | un plombier, limité à **son** entreprise | Vue d'ensemble (`/demandes`, avec le calendrier de la semaine), Appels, À rappeler, Rendez-vous (liste + Planning), Clients, Réglages |
 | Administration (`admin`) | l'équipe ChantierPilot | `/admin` : vue globale, Entreprises (fiche détaillée), Appels, Rappels, Rendez-vous, Comptes et accès |
 
 **Où sont vérifiés les droits.** Dans la base, jamais seulement dans
@@ -105,10 +105,15 @@ prouvée par le code reçu. Il n'y a aucun mot de passe.
 
 **Couches.** `app/` affiche, `lib/donnees/` est le seul module qui
 parle à la base, les règles et les indicateurs sont en SQL
-(`v_appels`, `v_rendez_vous`, `v_rappels`, `v_entreprises`,
+(`v_appels`, `v_rendez_vous`, `v_rappels`, `v_clients`, `v_entreprises`,
 `cp_indicateurs()`). Les données de démonstration vivent à part
 (`db/seed-demo.sql`) : les remplacer par les vrais appels de
 l'assistant ne touche pas au code.
+
+**Guide intégré.** La bulle « Aide » répond à partir des fiches écrites
+dans `lib/guide.ts` : pas d'IA, pas d'appel réseau, et elle le dit.
+Une fiche décrit ce que l'écran fait vraiment : quand une page change,
+sa fiche change dans le même commit.
 
 ### Base de données : ordre d'exécution
 
