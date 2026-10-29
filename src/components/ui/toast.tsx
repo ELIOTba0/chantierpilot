@@ -52,7 +52,7 @@ export function Toaster() {
           <div
             key={t.id}
             role="status"
-            className="pointer-events-auto flex w-full max-w-sm items-start gap-3 rounded-xl border border-line bg-surface px-4 py-3 shadow-(--shadow-pop)"
+            className="pointer-events-auto flex w-full max-w-sm items-start gap-3 rounded-2xl bg-surface px-4 py-3 shadow-(--shadow-pop)"
           >
             <Icon
               aria-hidden

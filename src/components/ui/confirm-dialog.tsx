@@ -39,7 +39,7 @@ export function ConfirmDialog({
       ref={ref}
       onClose={(e) => e.target === e.currentTarget && onClose()}
       onClick={(e) => e.target === ref.current && onClose()}
-      className="m-auto w-[min(28rem,calc(100vw-2rem))] rounded-xl border border-line bg-surface p-0 text-ink shadow-(--shadow-pop) backdrop:bg-ink/30"
+      className="m-auto w-[min(28rem,calc(100vw-2rem))] rounded-2xl bg-surface p-0 text-ink shadow-(--shadow-pop) backdrop:bg-ink/30"
     >
       <div className="p-5">
         <h2 className="text-base font-semibold tracking-tight">{title}</h2>

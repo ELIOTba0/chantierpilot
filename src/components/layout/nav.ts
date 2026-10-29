@@ -1,4 +1,4 @@
-import { CalendarDays, LayoutDashboard, PhoneCall, Settings, Users, type LucideIcon } from "lucide-react";
+import { LayoutDashboard, PhoneCall, Settings, Users, type LucideIcon } from "lucide-react";
 
 export interface NavItem {
   href: string;
@@ -9,7 +9,6 @@ export interface NavItem {
 export const NAV_ITEMS: NavItem[] = [
   { href: "/", label: "Vue d'ensemble", icon: LayoutDashboard },
   { href: "/appels", label: "Appels", icon: PhoneCall },
-  { href: "/planning", label: "Planning", icon: CalendarDays },
   { href: "/clients", label: "Clients", icon: Users },
   { href: "/reglages", label: "Réglages", icon: Settings },
 ];

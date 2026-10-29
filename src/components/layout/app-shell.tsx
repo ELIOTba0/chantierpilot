@@ -32,7 +32,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         Aller au contenu
       </a>
       <div className="flex min-h-dvh">
-        <aside className="fixed inset-y-0 left-0 hidden w-64 border-r border-line bg-surface lg:block">
+        <aside className="fixed inset-y-0 left-0 hidden w-64 border-r border-line bg-[#fbfbfd] lg:block">
           <Sidebar state={state} />
         </aside>
 
@@ -73,7 +73,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 function ShellSkeleton() {
   return (
     <div className="flex min-h-dvh" aria-busy="true" aria-label="Chargement d'Astio">
-      <div className="hidden w-64 border-r border-line bg-surface lg:block" />
+      <div className="hidden w-64 border-r border-line bg-[#fbfbfd] lg:block" />
       <div className="flex-1">
         <div className="h-16 border-b border-line bg-surface" />
         <div className="space-y-4 p-8">

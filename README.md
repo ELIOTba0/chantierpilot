@@ -29,9 +29,8 @@ rendez-vous, priorité et décision requise (transversale aux statuts).
 
 | Page | Contenu |
 | --- | --- |
-| Vue d'ensemble | Appels reçus aujourd'hui, appels à planifier, calendrier Jour / Semaine / Mois |
+| Vue d'ensemble | Appels reçus aujourd'hui, appels à planifier (panneau oui / non), calendrier Jour / Semaine / Mois avec plages libres cliquables, suggestions à confirmer et reprogrammation |
 | Appels | Kanban (glisser-déposer sur ordinateur) et liste, filtres, tri, panneau de détail avec transcription et historique |
-| Planning | Calendrier, plages libres cliquables, suggestions à confirmer, reprogrammation |
 | Clients | Recherche, fiche avec coordonnées, appels et rendez-vous |
 | Réglages | Profil, horaires, gestion des appels, réinitialisation de la démo |
 
@@ -45,10 +44,9 @@ src/
     ui/                Composants génériques (boutons, badges, modales, panneau latéral…)
     calls/             Kanban, liste, panneau d'appel, actions et dialogues
     calendar/          Calendrier et dialogues de rendez-vous
-    planning/          Panneau « À planifier »
     clients/           Liste et fiche client
     settings/          Formulaire de réglages
-    dashboard/         Tuiles de la vue d'ensemble
+    dashboard/         Tuiles et panneau « À planifier » de la vue d'ensemble
   lib/
     types.ts           Modèle de données
     demo-data.ts       Données fictives (relatives à la date du jour)

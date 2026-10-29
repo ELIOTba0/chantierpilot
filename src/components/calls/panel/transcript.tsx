@@ -22,7 +22,7 @@ export function Transcript({ lines, clientName, durationSec }: TranscriptProps) 
   const id = useId();
 
   return (
-    <section className="border-t border-line px-5 py-4 sm:px-6">
+    <section className="border-t border-line/70 px-5 py-4 sm:px-6">
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
@@ -31,7 +31,7 @@ export function Transcript({ lines, clientName, durationSec }: TranscriptProps) 
         className="flex w-full items-center justify-between gap-3 text-left"
       >
         <span>
-          <span className="block text-xs font-semibold tracking-wide text-ink-muted uppercase">Transcription</span>
+          <span className="block text-[15px] font-semibold text-ink">Transcription</span>
           <span className="mt-0.5 block text-[13px] text-ink-soft">
             {lines.length} échanges · {formatCallDuration(durationSec)}
           </span>

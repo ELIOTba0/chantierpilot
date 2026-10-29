@@ -35,7 +35,7 @@ export function Notifications({ state }: { state: AppState }) {
       >
         <Bell className="size-[18px]" />
         {queue.length > 0 && (
-          <span className="bg-brand-gradient absolute top-1 right-1 flex min-w-4 items-center justify-center rounded-full px-1 text-[10px] leading-4 font-semibold text-ink tabular-nums ring-2 ring-surface">
+          <span className="bg-brand-500 absolute top-1 right-1 flex min-w-4 items-center justify-center rounded-full px-1 text-[10px] leading-4 font-semibold text-ink tabular-nums ring-2 ring-surface">
             {queue.length}
           </span>
         )}
@@ -45,7 +45,7 @@ export function Notifications({ state }: { state: AppState }) {
         <div
           role="dialog"
           aria-label="Notifications"
-          className="absolute top-11 right-0 z-40 w-[min(22rem,calc(100vw-2rem))] overflow-hidden rounded-xl border border-line bg-surface shadow-(--shadow-pop)"
+          className="absolute top-11 right-0 z-40 w-[min(22rem,calc(100vw-2rem))] overflow-hidden rounded-2xl bg-surface shadow-(--shadow-pop)"
         >
           <div className="flex items-center justify-between border-b border-line px-4 py-3">
             <p className="text-sm font-semibold text-ink">Décisions en attente</p>

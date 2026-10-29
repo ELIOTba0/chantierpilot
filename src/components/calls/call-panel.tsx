@@ -42,7 +42,7 @@ function PanelContent({ call, onClose, onMove }: { call: Call; onClose: () => vo
     ? state.appointments.find((a) => a.id === call.appointmentId)
     : undefined;
 
-  const [mode, setMode] = useState<PanelMode>(call.decision?.kind === "choisir_creneau" ? "pick" : "view");
+  const [mode, setMode] = useState<PanelMode>("view");
   const [disqualifyOpen, setDisqualifyOpen] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
   // Un rendez-vous confirmé se reprogramme ; sinon le créneau choisi est confirmé.

@@ -73,7 +73,7 @@ export function TimeGrid({
                 <span
                   className={cn(
                     "flex size-7 items-center justify-center rounded-full text-sm font-semibold tabular-nums",
-                    today ? "bg-brand-gradient text-ink" : "text-ink",
+                    today ? "bg-brand-500 text-ink" : "text-ink",
                   )}
                 >
                   {day.getDate()}
@@ -139,7 +139,7 @@ export function TimeGrid({
                   <div
                     key={`${a}-${b}`}
                     aria-hidden
-                    className="absolute inset-x-0 bg-[repeating-linear-gradient(135deg,transparent_0_6px,rgb(28_27_25/0.035)_6px_7px)] bg-stone-50/80"
+                    className="absolute inset-x-0 bg-black/[0.025]"
                     style={{ top: px(a - GRID_START), height: px(b - a) }}
                   />
                 ))}
@@ -163,11 +163,11 @@ export function TimeGrid({
                         }
                         onFreeSlot?.(day, Math.min(start, block.end - 30), block);
                       }}
-                      className="group absolute inset-x-1 z-[5] rounded-md border border-dashed border-emerald-300/80 bg-emerald-50/40 text-left transition hover:border-emerald-500 hover:bg-emerald-50"
+                      className="group absolute inset-x-1 z-[5] rounded-md border border-dashed border-transparent text-left transition hover:border-emerald-400 hover:bg-emerald-50/70 focus-visible:border-emerald-400 focus-visible:bg-emerald-50/70"
                       style={{ top: top + 1, height: height - 2 }}
                     >
                       {height >= 26 && (
-                        <span className="pointer-events-none block truncate px-1.5 pt-0.5 text-[10px] font-medium text-emerald-700/80 group-hover:text-emerald-800">
+                        <span className="pointer-events-none block truncate px-1.5 pt-0.5 text-[11px] font-medium text-emerald-800 opacity-0 transition group-hover:opacity-100 group-focus-visible:opacity-100">
                           {label}
                         </span>
                       )}

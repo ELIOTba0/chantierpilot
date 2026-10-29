@@ -64,8 +64,8 @@ export function CallCard({
       onDragEnd={onDragEnd}
       aria-current={selected ? "true" : undefined}
       className={cn(
-        "group relative w-full overflow-hidden rounded-lg border bg-surface p-3 text-left shadow-(--shadow-card) transition hover:border-line-strong hover:shadow-sm",
-        selected ? "border-brand-500 ring-2 ring-brand-200" : "border-line",
+        "group relative w-full overflow-hidden rounded-xl bg-surface p-3 text-left shadow-(--shadow-card) transition hover:shadow-(--shadow-pop)",
+        selected && "ring-2 ring-brand-500",
         draggable && "cursor-grab active:cursor-grabbing",
         dragging && "opacity-40",
       )}
@@ -81,7 +81,7 @@ export function CallCard({
       <p className="mt-0.5 line-clamp-2 text-xs leading-relaxed text-ink-soft">{call.summary}</p>
 
       {(appt || suggestion || call.decision || showPriority) && (
-        <div className="mt-2.5 space-y-1.5 border-t border-line pt-2.5">
+        <div className="mt-2.5 space-y-1.5 border-t border-line/70 pt-2.5">
           {showPriority && <PriorityBadge priority={call.priority} />}
           {suggestion && (
             <p className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs text-ink-soft">

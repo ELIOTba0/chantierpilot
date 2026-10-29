@@ -48,7 +48,7 @@ export function ClientsWorkspace() {
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Nom, téléphone ou adresse"
             aria-label="Rechercher un client par nom, téléphone ou adresse"
-            className="h-9 w-full rounded-lg border border-line bg-surface pr-3 pl-9 text-sm placeholder:text-ink-muted focus:border-brand-500 focus:outline-none"
+            className="h-9 w-full rounded-lg border border-transparent bg-black/[0.05] pr-3 pl-9 text-sm placeholder:text-ink-muted focus:border-brand-500 focus:bg-surface focus:outline-none"
           />
         </div>
         <p className="ml-auto text-xs text-ink-muted" aria-live="polite">
@@ -56,7 +56,7 @@ export function ClientsWorkspace() {
         </p>
       </div>
 
-      <div className="overflow-hidden rounded-xl border border-line bg-surface shadow-(--shadow-card)">
+      <div className="overflow-hidden rounded-2xl bg-surface shadow-(--shadow-card)">
         {rows.length === 0 ? (
           <EmptyState
             icon={<UserX className="size-5" />}

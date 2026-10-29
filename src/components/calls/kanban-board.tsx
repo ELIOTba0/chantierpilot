@@ -45,9 +45,6 @@ export function KanbanBoard({ calls, statuses, clients, appointments, now, selec
 
   return (
     <div className="-mx-4 overflow-x-auto px-4 pb-2 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
-      {dragEnabled && (
-        <p className="mb-2 text-xs text-ink-muted">Faites glisser une carte vers une autre colonne pour changer son statut.</p>
-      )}
       <div className="flex snap-x snap-mandatory gap-4 lg:snap-none">
         {columns.map((status) => {
           const items = calls.filter((c) => c.status === status);
@@ -71,7 +68,7 @@ export function KanbanBoard({ calls, statuses, clients, appointments, now, selec
                 endDrag();
               }}
               className={cn(
-                "flex w-[82vw] max-w-[320px] shrink-0 snap-start flex-col rounded-xl bg-stone-100/70 p-2 transition sm:w-72 xl:w-auto xl:max-w-none xl:min-w-52 xl:flex-1",
+                "flex w-[82vw] max-w-[320px] shrink-0 snap-start flex-col rounded-2xl bg-black/[0.03] p-2 transition sm:w-72 xl:w-auto xl:max-w-none xl:min-w-52 xl:flex-1",
                 isTarget && "ring-1 ring-line-strong ring-inset",
                 overStatus === status && isTarget && "bg-brand-50 ring-2 ring-brand-400",
               )}

@@ -3,7 +3,7 @@
 import { ArrowDown, Sparkles } from "lucide-react";
 import type { Appointment, Call, Client } from "@/lib/types";
 import type { SortKey } from "@/lib/call-filters";
-import { DECISION_KIND } from "@/lib/labels";
+import { DECISION_KIND, PRIORITY } from "@/lib/labels";
 import { formatDayTime, formatPhone } from "@/lib/format";
 import { cn } from "@/lib/cn";
 import { AppointmentBadge, PriorityBadge, StatusBadge } from "./badges";
@@ -40,7 +40,7 @@ function SortHeader({ label, sortKey, sort, onSort }: { label: string; sortKey: 
 export function CallsTable({ calls, clients, appointments, now, sort, onSort, selectedId, onOpen }: CallsTableProps) {
   const apptList = [...appointments.values()];
   return (
-    <div className="overflow-hidden rounded-xl border border-line bg-surface shadow-(--shadow-card)">
+    <div className="overflow-hidden rounded-2xl bg-surface shadow-(--shadow-card)">
       {/* Tableau sur écran large */}
       <table className="hidden w-full text-left text-sm md:table">
         <thead className="border-b border-line bg-canvas text-xs text-ink-muted">
@@ -87,7 +87,14 @@ export function CallsTable({ calls, clients, appointments, now, sort, onSort, se
                   )}
                 </td>
                 <td className="px-3 py-3 whitespace-nowrap text-ink-soft tabular-nums">{formatDayTime(call.receivedAt, now)}</td>
-                <td className="px-3 py-3"><PriorityBadge priority={call.priority} /></td>
+                <td className="px-3 py-3">
+                  {/* Seules les priorités notables sont affichées, pour ne pas saturer la liste. */}
+                  {call.priority === "urgente" || call.priority === "haute" ? (
+                    <PriorityBadge priority={call.priority} />
+                  ) : (
+                    <span className="text-xs text-ink-muted">{PRIORITY[call.priority].label}</span>
+                  )}
+                </td>
                 <td className="px-3 py-3"><StatusBadge status={call.status} /></td>
                 <td className="px-3 py-3 whitespace-nowrap">
                   {sugg ? (

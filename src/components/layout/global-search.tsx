@@ -123,7 +123,7 @@ export function GlobalSearch({ state }: { state: AppState }) {
         aria-expanded={showPanel}
         aria-controls="global-search-results"
         aria-autocomplete="list"
-        className="h-9 w-full rounded-lg border border-line bg-canvas pr-10 pl-9 text-sm text-ink placeholder:text-ink-muted focus:border-brand-500 focus:bg-surface focus:outline-none"
+        className="h-9 w-full rounded-lg border border-transparent bg-black/[0.05] pr-10 pl-9 text-sm text-ink placeholder:text-ink-muted focus:border-brand-500 focus:bg-surface focus:outline-none"
       />
       <kbd className="pointer-events-none absolute top-1/2 right-2.5 hidden -translate-y-1/2 rounded border border-line bg-surface px-1.5 text-[11px] text-ink-muted sm:block">
         /
@@ -133,7 +133,7 @@ export function GlobalSearch({ state }: { state: AppState }) {
         <div
           id="global-search-results"
           role="listbox"
-          className="absolute top-11 right-0 left-0 z-40 overflow-hidden rounded-xl border border-line bg-surface py-1 shadow-(--shadow-pop)"
+          className="absolute top-11 right-0 left-0 z-40 overflow-hidden rounded-2xl bg-surface py-1 shadow-(--shadow-pop)"
         >
           {results.length === 0 ? (
             <p className="px-4 py-6 text-center text-[13px] text-ink-muted">Aucun résultat pour « {query} »</p>

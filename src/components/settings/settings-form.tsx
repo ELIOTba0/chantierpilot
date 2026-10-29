@@ -76,7 +76,7 @@ export function SettingsForm() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-6 pb-24">
-      <p className="flex items-start gap-2 rounded-xl border border-line bg-surface px-4 py-3 text-[13px] text-ink-soft">
+      <p className="flex items-start gap-2 rounded-2xl bg-surface px-4 py-3 shadow-(--shadow-card) text-[13px] text-ink-soft">
         <Info aria-hidden className="mt-0.5 size-4 shrink-0 text-ink-muted" />
         Ces réglages sont enregistrés dans votre navigateur. Ils pilotent la simulation (créneaux suggérés, plages libres,
         SMS) sans modifier le comportement réel de l&apos;agent vocal.

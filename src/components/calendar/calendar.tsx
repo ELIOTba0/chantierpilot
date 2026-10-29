@@ -138,13 +138,13 @@ export function Calendar({ nav, planning = false }: CalendarProps) {
         {planning && view !== "mois" && (
           <li className="flex items-center gap-1.5">
             <span aria-hidden className="size-3 rounded-sm border border-dashed border-emerald-400 bg-emerald-50" />
-            Libre (cliquer pour planifier)
+            Plage libre : cliquez pour planifier
           </li>
         )}
         <li className="flex items-center gap-1.5">
           <span
             aria-hidden
-            className="size-3 rounded-sm border border-line bg-[repeating-linear-gradient(135deg,transparent_0_3px,rgb(28_27_25/0.12)_3px_4px)]"
+            className="size-3 rounded-sm bg-black/[0.07]"
           />
           Indisponible
         </li>

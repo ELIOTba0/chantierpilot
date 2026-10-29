@@ -30,8 +30,8 @@ function CallButton({ client, primary }: { client: Client; primary?: boolean }) 
       href={`tel:${client.phone}`}
       className={
         primary
-          ? "bg-brand-gradient inline-flex h-8 items-center gap-1.5 rounded-lg px-3 text-[13px] font-medium text-ink shadow-sm ring-1 ring-inset ring-brand-600/40 hover:brightness-[1.04]"
-          : "inline-flex h-8 items-center gap-1.5 rounded-lg bg-surface px-3 text-[13px] font-medium text-ink ring-1 ring-inset ring-line-strong hover:bg-stone-50"
+          ? "inline-flex h-8 items-center gap-1.5 rounded-full bg-brand-500 px-3.5 text-[13px] font-medium text-ink hover:bg-brand-400"
+          : "inline-flex h-8 items-center gap-1.5 rounded-full bg-black/[0.05] px-3.5 text-[13px] font-medium text-ink hover:bg-black/[0.08]"
       }
     >
       <Phone aria-hidden className="size-3.5" />
@@ -45,7 +45,7 @@ export function SuggestedSlotCard({ slot, sms, now }: { slot: SlotProposal; sms:
   const minutes = Math.round((new Date(slot.end).getTime() - new Date(slot.start).getTime()) / 60_000);
   return (
     <div className="mt-3 rounded-lg border border-line bg-surface p-3">
-      <p className="flex items-center gap-1.5 text-[11px] font-medium tracking-wide text-ink-muted uppercase">
+      <p className="flex items-center gap-1.5 text-xs font-medium text-ink-muted">
         <CalendarClock aria-hidden className="size-3.5" />
         Créneau suggéré par Astio
       </p>

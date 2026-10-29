@@ -40,7 +40,7 @@ export function MoreActions({ call, onEdit, onMove }: MoreActionsProps) {
       {open && (
         <div
           role="menu"
-          className="absolute right-0 bottom-10 z-10 w-60 rounded-xl border border-line bg-surface p-1 shadow-(--shadow-pop)"
+          className="absolute right-0 bottom-10 z-10 w-60 rounded-2xl bg-surface p-1 shadow-(--shadow-pop)"
         >
           <button
             type="button"
@@ -53,7 +53,7 @@ export function MoreActions({ call, onEdit, onMove }: MoreActionsProps) {
           >
             Modifier les informations
           </button>
-          <p className="mt-1 border-t border-line px-2.5 pt-2 pb-1 text-[11px] font-medium tracking-wide text-ink-muted uppercase">
+          <p className="mt-1 border-t border-line px-2.5 pt-2 pb-1 text-xs font-medium text-ink-muted">
             Modifier le statut
           </p>
           {CALL_STATUS_ORDER.map((s) => (

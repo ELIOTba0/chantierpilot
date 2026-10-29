@@ -85,3 +85,8 @@ export function clientSummaries(state: AppState, now: number): ClientSummary[] {
     .filter((r) => r.calls.length === 0 || r.calls.some((c) => c.status !== "non_qualifie"))
     .sort((a, b) => b.lastInteraction.localeCompare(a.lastInteraction));
 }
+
+/** Appels menés à leur terme par Astio, sans aucune action du professionnel. */
+export function handledByAstio(calls: Call[]): Call[] {
+  return calls.filter((c) => c.decision === null && !c.history.some((e) => e.actor === "plombier"));
+}

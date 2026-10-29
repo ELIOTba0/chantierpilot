@@ -41,8 +41,8 @@ export function MultiSelect<T extends string>({ label, options, value, onChange 
         aria-expanded={open}
         aria-controls={id}
         className={cn(
-          "inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-[13px] font-medium ring-1 ring-inset transition",
-          value.length ? "bg-stone-100 text-ink ring-line-strong" : "bg-surface text-ink-soft ring-line hover:text-ink",
+          "inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-[13px] font-medium transition",
+          value.length ? "bg-black/[0.1] text-ink" : "bg-black/[0.05] text-ink-soft hover:bg-black/[0.08] hover:text-ink",
         )}
       >
         {label}
@@ -54,7 +54,7 @@ export function MultiSelect<T extends string>({ label, options, value, onChange 
           id={id}
           role="group"
           aria-label={label}
-          className="absolute top-10 left-0 z-30 w-56 rounded-xl border border-line bg-surface p-1 shadow-(--shadow-pop)"
+          className="absolute top-10 left-0 z-30 w-56 rounded-2xl bg-surface p-1 shadow-(--shadow-pop)"
         >
           {options.map((o) => {
             const checked = value.includes(o.value);

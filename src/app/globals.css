@@ -2,32 +2,34 @@
 
 /*
  * Design system Astio.
- * Orange de marque utilisé avec parcimonie : actions principales, éléments
- * actifs et accents. Les couleurs sémantiques sont distinctes de la marque.
+ * Inspiré des interfaces Apple : surfaces séparées par la lumière (ombres très
+ * légères) plutôt que par des bordures, typographie système, un seul accent.
+ * L'orange de marque est réservé aux actions principales et aux éléments actifs.
  */
 @theme inline {
-  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: -apple-system, BlinkMacSystemFont, var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
 
   --color-brand-50: #fff8eb;
   --color-brand-100: #ffefcc;
   --color-brand-200: #ffdd8f;
+  --color-brand-300: #ffcc5c;
   --color-brand-400: #ffbb33;
   --color-brand-500: #ffaa00;
   --color-brand-600: #ff9900;
   --color-brand-700: #c26a00;
   --color-brand-800: #9a5200;
 
-  --color-canvas: #f7f7f5;
+  --color-canvas: #f5f5f7;
   --color-surface: #ffffff;
-  --color-line: #e8e7e3;
-  --color-line-strong: #d9d8d3;
-  --color-ink: #1c1b19;
-  --color-ink-soft: #57554f;
-  --color-ink-muted: #8a8780;
+  --color-line: #e8e8ed;
+  --color-line-strong: #d2d2d7;
+  --color-ink: #1d1d1f;
+  --color-ink-soft: #424245;
+  --color-ink-muted: #6e6e73;
 
-  --shadow-card: 0 1px 2px rgb(28 27 25 / 0.04), 0 1px 1px rgb(28 27 25 / 0.02);
-  --shadow-pop: 0 10px 30px -10px rgb(28 27 25 / 0.18), 0 2px 6px rgb(28 27 25 / 0.06);
+  --shadow-card: 0 0 0 0.5px rgb(0 0 0 / 0.05), 0 1px 3px rgb(0 0 0 / 0.05);
+  --shadow-pop: 0 0 0 0.5px rgb(0 0 0 / 0.06), 0 12px 32px -8px rgb(0 0 0 / 0.16);
 }
 
 :root {
@@ -38,7 +40,7 @@ body {
   background: var(--color-canvas);
   color: var(--color-ink);
   font-family: var(--font-sans);
-  font-feature-settings: "cv11", "ss01";
+  letter-spacing: -0.006em;
 }
 
 .bg-brand-gradient {

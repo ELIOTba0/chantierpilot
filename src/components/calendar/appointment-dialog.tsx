@@ -90,7 +90,7 @@ function AppointmentDetail({ appt }: { appt: Appointment }) {
 
       {appt.history && appt.history.length > 0 && (
         <div>
-          <p className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold tracking-wide text-ink-muted uppercase">
+          <p className="mb-1.5 flex items-center gap-1.5 text-[13px] font-semibold text-ink">
             <History aria-hidden className="size-3.5" /> Historique
           </p>
           <ul className="space-y-1 text-[13px]">

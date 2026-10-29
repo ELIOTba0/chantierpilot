@@ -107,7 +107,7 @@ export function CallsWorkspace({ initialFilters }: { initialFilters: CallFilters
       />
 
       {visible.length === 0 ? (
-        <div className="rounded-xl border border-line bg-surface">
+        <div className="rounded-2xl bg-surface shadow-(--shadow-card)">
           <EmptyState
             icon={<PhoneOff className="size-5" />}
             title="Aucun appel ne correspond à ces filtres"

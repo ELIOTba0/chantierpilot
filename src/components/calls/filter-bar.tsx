@@ -51,8 +51,8 @@ function Toggle({
       aria-pressed={pressed}
       onClick={onClick}
       className={cn(
-        "inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-[13px] font-medium ring-1 ring-inset transition",
-        pressed ? "bg-brand-50 text-brand-800 ring-brand-200" : "bg-surface text-ink-soft ring-line hover:text-ink",
+        "inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-[13px] font-medium transition",
+        pressed ? "bg-brand-100 text-brand-800" : "bg-black/[0.05] text-ink-soft hover:bg-black/[0.08] hover:text-ink",
       )}
     >
       {children}
@@ -85,7 +85,7 @@ export function FilterBar({ filters, onChange, mode, onModeChange, counts }: Fil
             onChange={(e) => set("query", e.target.value)}
             placeholder="Nom, téléphone ou motif"
             aria-label="Rechercher un appel par nom, téléphone ou motif"
-            className="h-9 w-full rounded-lg border border-line bg-surface pr-3 pl-9 text-sm placeholder:text-ink-muted focus:border-brand-500 focus:outline-none"
+            className="h-9 w-full rounded-lg border border-transparent bg-black/[0.05] pr-3 pl-9 text-sm placeholder:text-ink-muted focus:border-brand-500 focus:bg-surface focus:outline-none"
           />
         </div>
 

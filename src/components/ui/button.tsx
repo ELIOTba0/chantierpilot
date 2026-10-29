@@ -6,21 +6,20 @@ type Variant = "primary" | "secondary" | "ghost" | "danger";
 type Size = "sm" | "md";
 
 const VARIANTS: Record<Variant, string> = {
-  primary:
-    "bg-brand-gradient text-ink shadow-sm ring-1 ring-inset ring-brand-600/40 hover:brightness-[1.04] active:brightness-95",
-  secondary: "bg-surface text-ink ring-1 ring-inset ring-line-strong hover:bg-stone-50",
-  ghost: "text-ink-soft hover:bg-stone-100 hover:text-ink",
-  danger: "bg-surface text-red-700 ring-1 ring-inset ring-red-200 hover:bg-red-50",
+  primary: "bg-brand-500 text-ink hover:bg-brand-400 active:bg-brand-600",
+  secondary: "bg-black/[0.05] text-ink hover:bg-black/[0.08] active:bg-black/[0.1]",
+  ghost: "text-ink-soft hover:bg-black/[0.05] hover:text-ink",
+  danger: "bg-red-50 text-red-700 hover:bg-red-100",
 };
 
 const SIZES: Record<Size, string> = {
-  sm: "h-8 gap-1.5 px-3 text-[13px]",
-  md: "h-9 gap-2 px-3.5 text-sm",
+  sm: "h-8 gap-1.5 px-3.5 text-[13px]",
+  md: "h-9 gap-2 px-4 text-sm",
 };
 
 function classes(variant: Variant, size: Size, className?: string) {
   return cn(
-    "inline-flex shrink-0 items-center justify-center rounded-lg font-medium transition disabled:pointer-events-none disabled:opacity-50",
+    "inline-flex shrink-0 items-center justify-center rounded-full font-medium transition disabled:pointer-events-none disabled:opacity-40",
     VARIANTS[variant],
     SIZES[size],
     className,

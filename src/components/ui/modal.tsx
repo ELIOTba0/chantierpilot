@@ -32,7 +32,7 @@ export function Modal({ open, onClose, title, description, children, footer, cla
       onClick={(e) => e.target === ref.current && onClose()}
       aria-label={title}
       className={cn(
-        "m-auto max-h-[calc(100dvh-2rem)] w-[min(30rem,calc(100vw-2rem))] overflow-hidden rounded-xl border border-line bg-surface p-0 text-ink shadow-(--shadow-pop) backdrop:bg-ink/30",
+        "m-auto max-h-[calc(100dvh-2rem)] w-[min(30rem,calc(100vw-2rem))] overflow-hidden rounded-2xl bg-surface p-0 text-ink shadow-(--shadow-pop) backdrop:bg-ink/30",
         className,
       )}
     >

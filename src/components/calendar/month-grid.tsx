@@ -57,7 +57,7 @@ export function MonthGrid({ days, month, items: allItems, clientName, hours, now
                 aria-label={`${label} : ${items.length} rendez-vous. Ouvrir la journée`}
                 className={cn(
                   "flex size-6 items-center justify-center rounded-full text-xs font-medium tabular-nums hover:bg-stone-200/70",
-                  today ? "bg-brand-gradient font-semibold text-ink" : inMonth ? "text-ink" : "text-ink-muted/70",
+                  today ? "bg-brand-500 font-semibold text-ink" : inMonth ? "text-ink" : "text-ink-muted/70",
                 )}
               >
                 {day.getDate()}
