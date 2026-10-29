@@ -10,6 +10,7 @@ import {
 import Entete from "../../composants/Entete";
 import Garde from "../../composants/Garde";
 import { Erreur, type ErreurPostgrest } from "../../composants/Etat";
+import { creerDevis } from "@/lib/devis";
 import Squelette from "../../composants/Squelette";
 
 type Fiche = {
@@ -89,6 +90,7 @@ function Contenu() {
   const [erreur, setErreur] = useState<ErreurPostgrest>(null);
   const [tout, setTout] = useState(false);
   const [action, setAction] = useState<"" | "en_cours">("");
+  const [devisEnCours, setDevisEnCours] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -121,6 +123,19 @@ function Contenu() {
       }
     })();
   }, [id]);
+
+  /** Le devis reprend le client, l'adresse et la description. */
+  async function etablirDevis() {
+    if (!d) return;
+    setDevisEnCours(true);
+    try {
+      const devisId = await creerDevis(d.id);
+      router.push(`/devis/${devisId}`);
+    } catch (e) {
+      setErreur({ message: e instanceof Error ? e.message : "Création impossible." });
+      setDevisEnCours(false);
+    }
+  }
 
   async function terminer() {
     if (!d) return;
@@ -388,6 +403,14 @@ function Contenu() {
                 : "Aucun rendez-vous : cette demande attend votre rappel."}
               {d.duree_estimee_min ? ` Durée prévue ${dureeTexte(d.duree_estimee_min)}.` : ""}
             </p>
+
+            <div style={{ display: "flex", flexWrap: "wrap", gap: ".625rem",
+                          marginBottom: d.statut !== "traitee" ? ".625rem" : 0 }}>
+              <button className="bouton" onClick={etablirDevis} disabled={devisEnCours}
+                      style={{ minHeight: 48 }}>
+                {devisEnCours ? "…" : "Établir un devis"}
+              </button>
+            </div>
 
             {d.statut !== "traitee" && (
               <div style={{ display: "flex", flexWrap: "wrap", gap: ".625rem" }}>

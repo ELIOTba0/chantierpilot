@@ -4,9 +4,11 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { sb } from "@/lib/supabase-browser";
+import { telephoneFrancais } from "@/lib/affichage";
 import Entete from "../../composants/Entete";
 import Garde from "../../composants/Garde";
 import { Erreur, type ErreurPostgrest } from "../../composants/Etat";
+import ChampSuggere, { type Proposition } from "../../composants/ChampSuggere";
 
 type Membre = { id: string; nom: string; role: string; entreprise_id: string; recoit_rdv: boolean };
 
@@ -33,6 +35,61 @@ const DUREES: [number, string][] = [
   [30, "30 minutes"], [60, "1 heure"], [90, "1 h 30"],
   [120, "2 heures"], [180, "3 heures"], [480, "Journée"],
 ];
+
+type TraitBAN = {
+  properties: { label: string; name: string; city: string; postcode: string; score: number };
+  geometry: { coordinates: [number, number] };
+};
+
+type ClientConnu = {
+  id: string; nom: string | null; telephone: string | null;
+  adresse: string | null; commune: string | null;
+};
+
+/**
+ * Propositions d'adresses, Base Adresse Nationale.
+ *
+ * Gratuite, sans clé, et c'est le référentiel officiel : une adresse
+ * choisie ici est forcément valide, avec ses coordonnées. Le plombier
+ * ne tape plus, il reconnaît.
+ */
+async function chercherAdresse(requete: string): Promise<Proposition<TraitBAN>[]> {
+  const r = await fetch(
+    `https://api-adresse.data.gouv.fr/search/?q=${encodeURIComponent(requete)}`
+    + "&limit=6&autocomplete=1"
+  );
+  if (!r.ok) return [];
+  const j = await r.json();
+  return ((j.features ?? []) as TraitBAN[]).map((t) => ({
+    cle: `${t.properties.label}-${t.geometry.coordinates.join(",")}`,
+    titre: t.properties.name,
+    detail: `${t.properties.postcode} ${t.properties.city}`,
+    valeur: t,
+  }));
+}
+
+type CommuneGeo = { nom: string; codesPostaux?: string[] };
+
+/**
+ * Communes françaises, API officielle geo.api.gouv.fr. Même esprit
+ * que la BAN : gratuite, sans clé, et c'est la liste de référence.
+ * Sert de filet quand l'adresse est saisie à la main plutôt que
+ * choisie — la commune reste alors exacte.
+ */
+async function chercherCommune(requete: string): Promise<Proposition<CommuneGeo>[]> {
+  const r = await fetch(
+    `https://geo.api.gouv.fr/communes?nom=${encodeURIComponent(requete)}`
+    + "&fields=nom,codesPostaux&boost=population&limit=7"
+  );
+  if (!r.ok) return [];
+  const liste = (await r.json()) as CommuneGeo[];
+  return liste.map((c) => ({
+    cle: c.nom,
+    titre: c.nom,
+    detail: c.codesPostaux?.[0],
+    valeur: c,
+  }));
+}
 
 export default function NouveauRdv() {
   return <Garde><Entete /><Contenu /></Garde>;
@@ -221,59 +278,122 @@ function Contenu() {
           <h2 style={{ marginTop: 0 }}>Le client</h2>
           <div style={{ display: "flex", flexWrap: "wrap", gap: "1rem" }}>
             <div style={{ flex: "1 1 260px", minWidth: 0 }}>
-              <label htmlFor="nom" style={{ display: "block", fontSize: ".875rem",
-                                            fontWeight: 500, marginBottom: ".375rem" }}>
-                Nom
-              </label>
-              <input id="nom" type="text" value={nom}
-                     onChange={(e) => setNom(e.target.value)} placeholder="Mme Arnaud" />
+              <ChampSuggere<ClientConnu>
+                id="nom"
+                libelle="Nom"
+                texte={nom}
+                surTexte={setNom}
+                placeholder="Mme Arnaud"
+                minimum={2}
+                aide="Un client déjà venu est proposé avec son téléphone et son adresse."
+                chercher={async (q) => {
+                  const { data } = await sb
+                    .from("clients")
+                    .select("id, nom, telephone, adresse, commune")
+                    .ilike("nom", `%${q}%`)
+                    .limit(6);
+                  return ((data as ClientConnu[]) ?? []).map((c) => ({
+                    cle: c.id,
+                    titre: c.nom ?? "Sans nom",
+                    detail: [c.telephone, c.commune].filter(Boolean).join(" · "),
+                    valeur: c,
+                  }));
+                }}
+                surChoix={(p) => {
+                  const c = p.valeur;
+                  setNom(c.nom ?? "");
+                  if (c.telephone) setTel(c.telephone);
+                  if (c.adresse) setAdresse(c.adresse);
+                  if (c.commune) setCommune(c.commune);
+                  // L'adresse vient de la fiche, pas du référentiel :
+                  // on ne prétend pas qu'elle a été vérifiée à l'instant.
+                  setVerif({ etat: "vierge" });
+                }}
+              />
             </div>
             <div style={{ flex: "1 1 200px", minWidth: 0 }}>
               <label htmlFor="tel" style={{ display: "block", fontSize: ".875rem",
                                             fontWeight: 500, marginBottom: ".375rem" }}>
                 Téléphone
               </label>
-              <input id="tel" type="text" value={tel}
-                     onChange={(e) => setTel(e.target.value)} placeholder="06 00 00 00 00" />
+              <input id="tel" type="tel" inputMode="tel" value={tel}
+                     onChange={(e) => setTel(e.target.value)}
+                     onBlur={(e) => setTel(telephoneFrancais(e.target.value))}
+                     placeholder="06 00 00 00 00" />
             </div>
           </div>
 
           <h2>L&apos;adresse</h2>
           <div style={{ display: "flex", flexWrap: "wrap", gap: "1rem" }}>
-            <div style={{ flex: "2 1 300px", minWidth: 0 }}>
-              <label htmlFor="adr" style={{ display: "block", fontSize: ".875rem",
-                                            fontWeight: 500, marginBottom: ".375rem" }}>
-                Numéro et rue
-              </label>
-              <input id="adr" type="text" value={adresse}
-                     onChange={(e) => { setAdresse(e.target.value); setVerif({ etat: "vierge" }); }}
-                     placeholder="18 rue Volney" />
+            <div style={{ flex: "2 1 320px", minWidth: 0 }}>
+              <ChampSuggere<TraitBAN>
+                id="adr"
+                libelle="Numéro et rue"
+                texte={adresse}
+                surTexte={(v) => { setAdresse(v); setVerif({ etat: "vierge" }); }}
+                placeholder="18 rue Volney"
+                chercher={chercherAdresse}
+                aide="Tapez trois lettres, puis choisissez dans la liste."
+                surChoix={(p) => {
+                  const t = p.valeur;
+                  const [lon, lat] = t.geometry.coordinates;
+                  setAdresse(t.properties.name);
+                  setCommune(t.properties.city);
+                  setVerif({
+                    etat: "ok",
+                    libelle: t.properties.label,
+                    lat, lon,
+                    score: t.properties.score,
+                  });
+                }}
+              />
             </div>
-            <div style={{ flex: "1 1 180px", minWidth: 0 }}>
-              <label htmlFor="com" style={{ display: "block", fontSize: ".875rem",
-                                            fontWeight: 500, marginBottom: ".375rem" }}>
-                Commune
-              </label>
-              <input id="com" type="text" value={commune}
-                     onChange={(e) => { setCommune(e.target.value); setVerif({ etat: "vierge" }); }}
-                     placeholder="Angers" />
+            <div style={{ flex: "1 1 200px", minWidth: 0 }}>
+              <ChampSuggere<CommuneGeo>
+                id="com"
+                libelle="Commune"
+                texte={commune}
+                surTexte={(v) => { setCommune(v); setVerif({ etat: "vierge" }); }}
+                placeholder="Angers"
+                minimum={2}
+                chercher={chercherCommune}
+                surChoix={(p) => {
+                  setCommune(p.valeur.nom);
+                  setVerif({ etat: "vierge" });
+                }}
+              />
             </div>
           </div>
 
           <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center",
-                        gap: ".875rem", marginTop: ".875rem" }}>
-            <button type="button" className="bouton" onClick={verifier}
-                    style={{ minHeight: 44, borderColor: "var(--accent)", color: "var(--accent)" }}
-                    disabled={verif.etat === "en_cours"}>
-              {verif.etat === "en_cours" ? "Vérification…" : "Vérifier l'adresse"}
-            </button>
-            {verif.etat === "ok" && (
-              <span style={{ fontSize: ".875rem", color: "var(--accent-sombre)", lineHeight: 1.45 }}>
-                {verif.libelle} — trouvée dans la Base Adresse Nationale
+                        gap: ".875rem", marginTop: ".875rem", minHeight: 44 }}>
+            {verif.etat === "ok" ? (
+              <span style={{ display: "inline-flex", alignItems: "flex-start", gap: ".5rem",
+                             fontSize: ".875rem", color: "var(--accent-sombre)",
+                             lineHeight: 1.45 }}>
+                <svg width="15" height="15" viewBox="0 0 20 20" fill="none" aria-hidden="true"
+                     style={{ flex: "none", marginTop: 2 }}>
+                  <circle cx="10" cy="10" r="7.6" stroke="currentColor" strokeWidth="1.7" />
+                  <path d="m6.6 10.2 2.3 2.3 4.5-4.8" stroke="currentColor" strokeWidth="1.9"
+                        strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                {verif.libelle} — adresse du référentiel national
               </span>
-            )}
-            {verif.etat === "echec" && (
-              <span className="erreur">{verif.message}</span>
+            ) : (
+              <>
+                <button type="button" className="bouton" onClick={verifier}
+                        style={{ minHeight: 44, borderColor: "var(--accent)",
+                                 color: "var(--accent)" }}
+                        disabled={verif.etat === "en_cours"}>
+                  {verif.etat === "en_cours" ? "Vérification…" : "Vérifier l'adresse"}
+                </button>
+                {verif.etat === "echec" && <span className="erreur">{verif.message}</span>}
+                {verif.etat === "vierge" && (
+                  <span className="discret">
+                    Adresse saisie à la main : à vérifier avant d&apos;enregistrer.
+                  </span>
+                )}
+              </>
             )}
           </div>
 

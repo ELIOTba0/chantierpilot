@@ -3,6 +3,7 @@ import { db, journaliser } from "@/lib/db";
 import { cleFonctionValide } from "@/lib/retell";
 import { creneauxLibres } from "@/lib/agenda";
 import { dureePour, creneauEnFrancais, dansLaZone } from "@/lib/metier";
+import { reglagesPour, consignePourMode } from "@/lib/reglages";
 
 export const runtime = "nodejs";
 
@@ -48,6 +49,23 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ disponible: false, raison: "plombier_inconnu" });
   }
 
+  // Le mode de prise de rendez-vous est un réglage du plombier, pas
+  // une règle du prompt : il peut changer d'avis sans qu'on touche à
+  // l'agent.
+  const reglages = await reglagesPour(plombier.id);
+
+  if (reglages.mode === "aucune") {
+    await journaliser({
+      plombier_id: plombier.id,
+      action: "creneaux_non_proposes_mode_aucune",
+    });
+    return NextResponse.json({
+      disponible: false,
+      raison: "prise_rdv_desactivee",
+      consigne: consignePourMode(reglages, "creneaux"),
+    });
+  }
+
   // Hors zone : on ne propose rien, l'agent prend un message.
   if (args.commune && !dansLaZone(args.commune, plombier.communes ?? [])) {
     await journaliser({
@@ -73,19 +91,23 @@ export async function POST(req: NextRequest) {
       calendarId: plombier.google_calendar_id ?? "primary",
       dureeMin: dureePour(args.type_probleme),
       horaires: plombier.horaires as Record<string, string>,
-      maxResultats: 6,
+      maxResultats: Math.max(4, reglages.creneauxProposes * 3),
     });
 
     if (creneaux.length === 0) {
       return NextResponse.json({ disponible: false, raison: "aucun_creneau" });
     }
 
-    // On en propose deux, jamais une liste : au téléphone,
-    // personne ne retient davantage.
-    const proposes = creneaux.slice(0, 2);
+    // On en propose deux par défaut, jamais une liste : au
+    // téléphone, personne ne retient davantage.
+    const proposes = creneaux.slice(0, reglages.creneauxProposes);
 
     return NextResponse.json({
       disponible: true,
+      // « proposition » en validation manuelle, « disponible » sinon.
+      // L'agent lit ce champ pour choisir ses mots.
+      ferme: reglages.mode === "auto",
+      consigne: consignePourMode(reglages, "creneaux"),
       creneaux: proposes.map((c) => ({
         debut: c.debut,
         fin: c.fin,

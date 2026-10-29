@@ -16,6 +16,7 @@ const ONGLETS = [
   { href: "/demandes", libelle: "Aujourd'hui", exact: true },
   { href: "/agenda", libelle: "Planning", exact: false },
   { href: "/demandes/toutes", libelle: "Demandes", exact: false },
+  { href: "/devis", libelle: "Devis", exact: false },
   { href: "/reglages", libelle: "Réglages", exact: false },
 ];
 
@@ -33,6 +34,16 @@ function Icone({ nom }: { nom: string }) {
       <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
         <rect x="3" y="3.5" width="14" height="13" rx="2.5" stroke="currentColor" strokeWidth="1.7" />
         <path d="M7.7 3.5v13M12.3 3.5v13" stroke="currentColor" strokeWidth="1.7" />
+      </svg>
+    );
+  }
+  if (nom === "/devis") {
+    return (
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+        <path d="M5 2.5h7l3.5 3.5V17a.5.5 0 0 1-.5.5H5a.5.5 0 0 1-.5-.5V3a.5.5 0 0 1 .5-.5Z"
+              stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+        <path d="M11.8 2.6V6.3h3.6M7.3 10h5.4M7.3 13.2h3.4"
+              stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
       </svg>
     );
   }
@@ -141,14 +152,14 @@ export default function Entete() {
           </nav>
 
           <div className="entete-fin">
-            {entreprises && entreprises.length > 0 && (
-              <label style={{ display: "inline-flex", alignItems: "center", gap: ".5rem",
-                              fontSize: ".8125rem", color: "var(--ink-2)" }}>
-                <span style={{ whiteSpace: "nowrap" }}>Client</span>
+            {/* Le sélecteur ne s'affiche qu'à partir de deux clients :
+                tant qu'il n'y en a qu'un, il n'offre aucun choix et
+                encombre une barre qui doit rester calme. */}
+            {entreprises && entreprises.length > 1 && (
+              <label className="choix-client">
+                <span>Client</span>
                 <select value={active}
-                        onChange={(e) => changerEntreprise(e.target.value)}
-                        style={{ minHeight: 40, width: "auto", minWidth: "11rem",
-                                 padding: "0 .5rem", fontSize: ".875rem" }}>
+                        onChange={(e) => changerEntreprise(e.target.value)}>
                   {entreprises.map((e) => (
                     <option key={e.id} value={e.id}>{e.nom}</option>
                   ))}

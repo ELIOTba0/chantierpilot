@@ -6,6 +6,7 @@ import {
   dureePour, dansLaZone, normaliserUrgence, creneauEnFrancais, normaliserCommune,
 } from "@/lib/metier";
 import { coordonnees } from "@/lib/adresse";
+import { reglagesPour, consignePourMode } from "@/lib/reglages";
 
 export const runtime = "nodejs";
 
@@ -66,7 +67,7 @@ export async function POST(req: NextRequest) {
       .from("demandes")
       .select("id, rendez_vous(debut)")
       .eq("retell_call_id", callId)
-      .eq("statut", "rdv_pris")
+      .in("statut", ["rdv_pris", "a_confirmer"])
       .maybeSingle();
 
     if (deja) {
@@ -90,6 +91,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ reserve: false, raison: "plombier_inconnu" });
   }
 
+  const reglages = await reglagesPour(plombier.id);
+
   const commune = (a.commune as string) ?? null;
   const dans_zone = dansLaZone(commune, plombier.communes ?? []);
   if (commune && !dans_zone) {
@@ -97,7 +100,7 @@ export async function POST(req: NextRequest) {
   }
 
   const typeProbleme = (a.type_probleme as string) ?? "autre";
-  const dureeMin = dureePour(typeProbleme);
+  const dureeMin = dureePour(typeProbleme) || reglages.dureeDefautMin;
   const fin = new Date(new Date(debut).getTime() + dureeMin * 60000).toISOString();
   const adresse = (a.adresse as string) ?? "";
 
@@ -107,6 +110,11 @@ export async function POST(req: NextRequest) {
   const point = adresse
     ? await coordonnees(adresse, commune, normaliserCommune)
     : null;
+
+  // Mode « aucune » : l'assistant ne prend pas de rendez-vous. La
+  // demande est tout de même recueillie — c'est tout l'intérêt — et
+  // l'agent reçoit la consigne de ne rien promettre.
+  const statutInitial = reglages.mode === "aucune" ? "a_rappeler" : "nouvelle";
 
   // 1. La fiche demande — écrite même si l'agenda échoue ensuite.
   const { data: demande, error: errDemande } = await db
@@ -125,7 +133,7 @@ export async function POST(req: NextRequest) {
       duree_estimee_min: dureeMin,
       nom_client: (a.nom_client as string) ?? null,
       telephone_client: (a.telephone_client as string) ?? null,
-      statut: "nouvelle",
+      statut: statutInitial,
     })
     .select("id")
     .single();
@@ -140,6 +148,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ reserve: false, raison: "erreur_interne" });
   }
 
+  if (reglages.mode === "aucune") {
+    return NextResponse.json({
+      reserve: false,
+      raison: "prise_rdv_desactivee",
+      consigne: consignePourMode(reglages, "reserve"),
+    });
+  }
+
   // 2. L'événement dans l'agenda.
   if (!plombier.google_refresh_token) {
     await db.from("demandes").update({ statut: "a_rappeler" }).eq("id", demande.id);
@@ -152,7 +168,11 @@ export async function POST(req: NextRequest) {
       calendarId: plombier.google_calendar_id ?? "primary",
       debut,
       fin,
-      titre: `${typeProbleme} — ${(a.nom_client as string) ?? "client"}`,
+      // En validation manuelle, le créneau est bloqué pour que
+      // l'assistant cesse de le proposer, mais le titre dit
+      // clairement qu'il n'est pas acquis.
+      titre: (reglages.mode === "manuelle" ? "[À confirmer] " : "")
+           + `${typeProbleme} — ${(a.nom_client as string) ?? "client"}`,
       description: [
         (a.description_client as string) ?? "",
         "",
@@ -164,22 +184,36 @@ export async function POST(req: NextRequest) {
       adresse,
     });
 
+    const manuel = reglages.mode === "manuelle";
+
     const { error: errRdv } = await db.from("rendez_vous").insert({
       demande_id: demande.id,
       plombier_id: plombier.id,
+      assigne_a: plombier.id,
       debut,
       fin,
       google_event_id: eventId,
-      statut: "confirme",
+      statut: manuel ? "propose" : "confirme",
+      origine: "assistant",
       confirme_par_client: true,
     });
 
     if (errRdv) throw new Error(errRdv.message);
 
-    await db.from("demandes").update({ statut: "rdv_pris" }).eq("id", demande.id);
+    await db.from("demandes").update({
+      statut: manuel ? "a_confirmer" : "rdv_pris",
+      repondre_avant: manuel
+        ? new Date(Date.now() + reglages.delaiReponseMin * 60000).toISOString()
+        : null,
+    }).eq("id", demande.id);
 
     return NextResponse.json({
-      reserve: true,
+      // En validation manuelle le créneau est tenu, mais ce n'est pas
+      // un rendez-vous : l'agent ne doit pas l'annoncer comme tel.
+      reserve: !manuel,
+      a_confirmer: manuel,
+      ferme: !manuel,
+      consigne: consignePourMode(reglages, "reserve"),
       debut,
       fin,
       libelle: creneauEnFrancais(debut),

@@ -644,11 +644,13 @@ h2 {
    Formulaires
    --------------------------------------------------------------- */
 
+/* Énumérer les types un par un revient à oublier le suivant :
+   « tel » a suffi à faire retomber un champ sur l'apparence par
+   défaut du navigateur, au milieu d'un formulaire soigné. On prend
+   donc tout, sauf les cases et les boutons radio, qui se dessinent
+   autrement. */
 .saisie,
-input[type="text"],
-input[type="email"],
-input[type="time"],
-input[type="date"],
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
 select,
 textarea {
   width: 100%;
@@ -854,4 +856,413 @@ input:disabled { background: var(--neutre-fond); color: var(--ink-3); }
   .colonnes { display: block; }
   .carte-lieu iframe { display: none; }
   body { background: #FFFFFF; color: #000000; }
+}
+
+/* ---------------------------------------------------------------
+   Propositions de saisie
+   --------------------------------------------------------------- */
+
+.suggestions {
+  position: absolute;
+  z-index: 30;
+  left: 0;
+  right: 0;
+  margin: .25rem 0 0;
+  padding: .25rem;
+  list-style: none;
+  background: var(--surface);
+  border: 1px solid var(--bord-champ);
+  border-radius: var(--r-s);
+  box-shadow: 0 12px 32px rgba(20, 32, 30, .16);
+  max-height: 17rem;
+  overflow-y: auto;
+}
+
+.suggestions li {
+  display: flex;
+  flex-direction: column;
+  gap: .125rem;
+  padding: .625rem .75rem;
+  min-height: 48px;
+  justify-content: center;
+  border-radius: 7px;
+  cursor: pointer;
+}
+
+.suggestions li[data-survol="true"] { background: var(--accent-fond); }
+
+.suggestion-titre  { font-size: .9375rem; font-weight: 500; }
+.suggestion-detail { font-size: .8125rem; color: var(--ink-2); }
+
+/* ---------------------------------------------------------------
+   Communes retenues
+   --------------------------------------------------------------- */
+
+.puce-commune {
+  display: inline-flex;
+  align-items: center;
+  gap: .5rem;
+  min-height: 44px;
+  padding: 0 .5rem 0 .875rem;
+  border: 1px solid var(--bord-champ);
+  background: var(--surface);
+  border-radius: 999px;
+  font-size: .875rem;
+  font-weight: 500;
+}
+
+.puce-commune button {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: transparent;
+  border-radius: 50%;
+  cursor: pointer;
+  color: var(--ink-2);
+}
+.puce-commune button:hover { background: var(--neutre-fond); color: var(--ink); }
+
+/* ---------------------------------------------------------------
+   Sélecteur de client, réservé à l'équipe ChantierPilot
+   --------------------------------------------------------------- */
+
+/* Il vit dans la barre du haut, à côté du nom et de l'état de
+   l'assistant : il doit s'y fondre, pas y ressembler à un formulaire
+   égaré. D'où l'absence de cadre tant qu'on ne le survole pas. */
+.choix-client {
+  display: inline-flex;
+  align-items: center;
+  gap: .4375rem;
+  font-size: .8125rem;
+  color: var(--ink-2);
+  white-space: nowrap;
+}
+
+.choix-client select {
+  width: auto;
+  min-height: 36px;
+  padding: 0 1.5rem 0 .5rem;
+  border-color: transparent;
+  background: transparent;
+  color: var(--ink);
+  font-size: .8125rem;
+  font-weight: 500;
+}
+
+.choix-client select:hover {
+  border-color: var(--bord-champ);
+  background: var(--surface);
+}
+
+@media (max-width: 720px) {
+  .choix-client { display: none; }
+}
+
+/* ---------------------------------------------------------------
+   Devis
+   ---------------------------------------------------------------
+   Le document s'édite tel qu'il sera imprimé : les champs vivent
+   dedans, et l'impression retire leurs cadres. Ce qu'on voit à
+   l'écran est ce qui sort de l'imprimante. */
+
+.barre-devis {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .75rem;
+  margin-bottom: 1.5rem;
+}
+
+.devis {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-l);
+  padding: 2.5rem 2.75rem 3rem;
+  max-width: 54rem;
+}
+
+.devis-tete {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 2rem;
+  padding-bottom: 1.75rem;
+  border-bottom: 2px solid var(--ink);
+}
+
+.devis-entreprise { font-size: 1.25rem; font-weight: 600; letter-spacing: -0.015em; }
+.devis-petit { font-size: .8125rem; line-height: 1.65; color: var(--ink-2); margin-top: .375rem; }
+.devis-titre {
+  font-size: 1.75rem; font-weight: 600; letter-spacing: -0.03em;
+  text-transform: uppercase; color: var(--accent);
+}
+.devis-numero { font-size: 1rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+.devis-parties {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2rem 3rem;
+  padding: 1.75rem 0;
+}
+.devis-parties > div { flex: 1 1 16rem; min-width: 0; }
+
+.devis-champ {
+  width: 100%;
+  min-height: 36px;
+  padding: .25rem .5rem;
+  margin-bottom: .25rem;
+  border: 1px dashed var(--bord-champ);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ink);
+  font-family: inherit;
+  font-size: .9375rem;
+}
+.devis-champ:disabled { border-color: transparent; color: var(--ink); opacity: 1; }
+.devis-champ.nombre { text-align: right; font-variant-numeric: tabular-nums; }
+
+.devis-table { width: 100%; border-collapse: collapse; margin-top: .5rem; }
+.devis-table th {
+  text-align: left;
+  font-size: .6875rem;
+  font-weight: 600;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+  padding: .5rem .375rem;
+  border-bottom: 1px solid var(--line);
+}
+.devis-table td { padding: .25rem .375rem; border-bottom: 1px solid var(--line-2); vertical-align: middle; }
+.devis-table .nombre { text-align: right; font-variant-numeric: tabular-nums; }
+.devis-table .total { font-weight: 600; font-size: .9375rem; }
+
+.retirer-ligne {
+  width: 32px; height: 32px;
+  border: 0; background: transparent;
+  color: var(--ink-3); font-size: 1.125rem;
+  cursor: pointer; border-radius: 50%;
+}
+.retirer-ligne:hover { background: var(--neutre-fond); color: var(--urgent-texte); }
+
+.devis-totaux { margin-left: auto; max-width: 22rem; margin-top: 1.5rem; }
+.devis-ligne-total {
+  display: flex; justify-content: space-between; gap: 2rem;
+  padding: .5rem 0; font-size: .9375rem;
+}
+.devis-ligne-total .nombre { font-variant-numeric: tabular-nums; }
+.devis-ttc {
+  border-top: 2px solid var(--ink);
+  margin-top: .5rem; padding-top: .75rem;
+  font-size: 1.125rem; font-weight: 600;
+}
+
+.devis-mentions {
+  margin-top: 2.5rem; padding-top: 1.5rem;
+  border-top: 1px solid var(--line);
+  font-size: .8125rem; line-height: 1.65; color: var(--ink-2);
+}
+.devis-mentions p { margin: 0 0 .75rem; }
+.devis-mentions strong { color: var(--ink); }
+
+.devis-signature { margin-top: 2rem; }
+.devis-cadre-signature {
+  margin-top: .5rem;
+  border: 1px dashed var(--bord-fort);
+  border-radius: 8px;
+  padding: 1.25rem 1rem 3.5rem;
+  font-size: .8125rem;
+  color: var(--ink-3);
+}
+
+/* ------------------------------------------------------------------
+   Ce que l'on sait déjà du client, au-dessus du devis.
+
+   Volontairement discret : c'est un aide-mémoire, pas le document.
+   ------------------------------------------------------------------ */
+
+.rappel-client {
+  max-width: 920px;
+  margin: 0 auto 1.25rem;
+  background: var(--accent-fond);
+  border: 1px solid var(--accent-bord);
+  border-radius: var(--r-l);
+  padding: 1.125rem 1.25rem 1.25rem;
+}
+
+.rappel-client-titre {
+  font-size: .75rem;
+  font-weight: 600;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  color: var(--accent-sombre);
+  margin-bottom: .75rem;
+}
+
+.rappel-liste { list-style: none; margin: 0; padding: 0; }
+
+.rappel-liste li {
+  padding: .875rem 0;
+  border-top: 1px solid var(--accent-bord);
+}
+.rappel-liste li:first-child { border-top: 0; padding-top: 0; }
+
+.rappel-quand {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .625rem;
+  font-size: .8125rem;
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+  margin-bottom: .25rem;
+}
+
+.rappel-origine {
+  font-size: .6875rem;
+  font-weight: 600;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: .1875rem .5rem;
+}
+
+.rappel-texte { font-size: .9375rem; line-height: 1.5; }
+.rappel-lieu  { font-size: .8125rem; color: var(--ink-2); margin-top: .125rem; }
+
+.rappel-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .875rem;
+  margin-top: .625rem;
+}
+
+/* ------------------------------------------------------------------
+   Envoi et export du devis.
+   ------------------------------------------------------------------ */
+
+.envoi-devis {
+  max-width: 920px;
+  margin: 1.5rem auto 0;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-l);
+  padding: 1.375rem 1.5rem 1.5rem;
+}
+
+.envoi-titre {
+  margin: 0 0 .25rem;
+  font-size: 1.0625rem;
+  font-weight: 600;
+  letter-spacing: -0.012em;
+}
+
+.envoi-grille {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .625rem;
+}
+
+.envoi-grille > * { flex: 0 1 auto; }
+
+@media (max-width: 640px) {
+  .envoi-grille > * { flex: 1 1 10rem; justify-content: center; }
+}
+
+@media print {
+  .barre-devis, .sans-impression, .rappel-client, .envoi-devis,
+  .encart-erreur, .encart-info { display: none !important; }
+  .devis {
+    border: 0; border-radius: 0; padding: 0; max-width: none;
+    background: #FFFFFF; color: #000000;
+  }
+  .devis-champ { border-color: transparent !important; padding-left: 0; }
+  .devis-titre { color: #000000; }
+  .devis-petit, .devis-mentions { color: #333333; }
+  .devis-table { page-break-inside: auto; }
+  .devis-table tr { page-break-inside: avoid; }
+  .devis-mentions, .devis-totaux { page-break-inside: avoid; }
+}
+
+/* ------------------------------------------------------------------
+   Reprise d'une liste de tarifs depuis un tableur.
+   ------------------------------------------------------------------ */
+
+.bloc-import {
+  border: 1px dashed var(--bord-fort);
+  border-radius: var(--r-l);
+  padding: 1.125rem 1.25rem 1.25rem;
+  margin: 1.25rem 0 1.5rem;
+  background: var(--neutre-fond);
+}
+
+.bloc-import-titre {
+  font-size: .9375rem;
+  font-weight: 600;
+  margin-bottom: .25rem;
+}
+
+.rapport-import {
+  margin-top: 1rem;
+  padding-top: .875rem;
+  border-top: 1px solid var(--line);
+  font-size: .875rem;
+  line-height: 1.55;
+}
+
+.rapport-import code {
+  font-size: .8125rem;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  padding: .0625rem .3125rem;
+}
+
+/* ------------------------------------------------------------------
+   La base de calcul : taux horaire, marge, déplacement.
+   ------------------------------------------------------------------ */
+
+.base-calcul {
+  border: 1px solid var(--accent-bord);
+  background: var(--accent-fond);
+  border-radius: var(--r-l);
+  padding: 1.125rem 1.25rem 1.25rem;
+  margin: 1.25rem 0 0;
+}
+
+.base-calcul-champs {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  gap: 1rem;
+}
+
+.base-calcul-champs label {
+  display: block;
+  font-size: .875rem;
+  font-weight: 500;
+  margin-bottom: .375rem;
+}
+
+.base-calcul-champs input { text-align: right; font-variant-numeric: tabular-nums; }
+
+.base-calcul-champs .discret {
+  display: block;
+  margin-top: .3125rem;
+  font-size: .75rem;
+  line-height: 1.45;
+}
+
+.prix-calcule {
+  margin-top: .25rem;
+  font-size: .6875rem;
+  line-height: 1.35;
+  color: var(--ink-2);
+  text-align: right;
+  overflow-wrap: anywhere;
 }

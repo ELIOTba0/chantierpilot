@@ -54,6 +54,7 @@ function Contenu() {
   const [erreur, setErreur] = useState<ErreurPostgrest>(null);
   const [chargement, setChargement] = useState(true);
   const [occupe, setOccupe] = useState<string | null>(null);
+  const [avis, setAvis] = useState<string | null>(null);
 
   async function charger() {
     const { data, error } = await sb
@@ -77,80 +78,49 @@ function Contenu() {
     })();
   }, []);
 
-  /** Accepter : le rendez-vous proposé devient ferme. */
-  async function accepter(l: Ligne) {
-    setOccupe(l.id);
-    const rdv = l.rendez_vous?.[0];
-    if (rdv) {
-      const { error } = await sb.from("rendez_vous")
-        .update({ statut: "confirme" }).eq("id", rdv.id);
-      if (error) { setErreur(error); setOccupe(null); return; }
-    }
-    const { error } = await sb.from("demandes").update({
-      statut: "rdv_pris",
-      decision: "acceptee",
-      decide_le: new Date().toISOString(),
-    }).eq("id", l.id);
-    if (error) { setErreur(error); setOccupe(null); return; }
-
-    await trace(l, rdv?.id ?? null, "confirmation",
-      `Bonjour, votre rendez-vous est confirmé${rdv ? ` le ${jour(rdv.debut)} à ${heure(rdv.debut)}` : ""}` +
-      `${l.adresse ? `, ${l.adresse}` : ""}${l.commune ? ` à ${l.commune}` : ""}.`);
-
-    setOccupe(null);
-    charger();
-  }
-
-  /** Refuser : aucun créneau n'est bloqué, et le client le sait. */
-  async function refuser(l: Ligne) {
-    const motif = prompt("Motif communiqué au client ?", "Agenda complet cette semaine");
-    if (motif === null) return;
-    setOccupe(l.id);
-    const rdv = l.rendez_vous?.[0];
-    if (rdv) {
-      const { error } = await sb.from("rendez_vous").update({
-        statut: "annule",
-        annule_le: new Date().toISOString(),
-        motif_annulation: motif || null,
-      }).eq("id", rdv.id);
-      if (error) { setErreur(error); setOccupe(null); return; }
-    }
-    const { error } = await sb.from("demandes").update({
-      statut: "refusee",
-      decision: "refusee",
-      decide_le: new Date().toISOString(),
-      motif_refus: motif || null,
-    }).eq("id", l.id);
-    if (error) { setErreur(error); setOccupe(null); return; }
-
-    await trace(l, rdv?.id ?? null, "refus",
-      `Bonjour, nous ne pouvons malheureusement pas prendre votre demande en charge` +
-      `${motif ? ` (${motif.toLowerCase()})` : ""}. Nous vous invitons à contacter un autre artisan.`);
-
-    setOccupe(null);
-    charger();
-  }
-
   /**
-   * Le message part en base avec son texte exact, quel que soit le
-   * canal. En cas de litige sur un rendez-vous, c'est la seule preuve
-   * de ce qui a été annoncé au client.
+   * Accepter ou refuser passe par le serveur.
+   *
+   * Changer le statut ne suffit pas : le créneau a été bloqué dans
+   * Google Agenda pendant l'attente. Accepter doit retirer la
+   * mention « à confirmer » ; refuser doit libérer le créneau, sinon
+   * l'assistant continuerait d'éviter une heure redevenue libre.
    */
-  async function trace(l: Ligne, rdvId: string | null, modele: string, contenu: string) {
-    const { data: ent } = await sb
-      .from("entreprises").select("id, canal_notification").maybeSingle();
-    if (!ent) return;
-    await sb.from("notifications").insert({
-      entreprise_id: ent.id,
-      demande_id: l.id,
-      rendez_vous_id: rdvId,
-      destinataire: "client",
-      adresse_dest: l.telephone_client,
-      canal: ent.canal_notification ?? "interface",
-      modele,
-      contenu,
-      statut: "a_envoyer",
+  async function decider(l: Ligne, decision: "acceptee" | "refusee") {
+    let motif: string | null = null;
+    if (decision === "refusee") {
+      motif = prompt("Motif communiqué au client ?", "Agenda complet cette semaine");
+      if (motif === null) return;
+    }
+
+    setOccupe(l.id);
+    setErreur(null);
+    setAvis(null);
+
+    const { data: session } = await sb.auth.getSession();
+    const jeton = session.session?.access_token;
+    if (!jeton) {
+      setErreur({ message: "Session expirée. Reconnectez-vous." });
+      setOccupe(null);
+      return;
+    }
+
+    const r = await fetch("/api/demandes/decision", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${jeton}` },
+      body: JSON.stringify({ demandeId: l.id, decision, motif }),
     });
+    const corps = await r.json().catch(() => ({}));
+    setOccupe(null);
+
+    if (!r.ok) {
+      setErreur({ message: corps.erreur ?? "La décision n'a pas pu être enregistrée." });
+      await charger();
+      return;
+    }
+
+    if (corps.googleMessage) setAvis(corps.googleMessage);
+    await charger();
   }
 
   if (chargement) return <Squelette />;
@@ -179,6 +149,10 @@ function Contenu() {
       </p>
 
       <Erreur e={erreur} />
+
+      {avis && (
+        <div className="encart-info" role="status">{avis}</div>
+      )}
 
       {modeValidation === "auto" && groupes.a_confirmer.length === 0 && (
         <div className="encart-info">
@@ -244,12 +218,12 @@ function Contenu() {
                     <button className="bouton" data-style="plein"
                             style={{ minHeight: 44, padding: "0 1.125rem" }}
                             disabled={occupe === l.id}
-                            onClick={() => accepter(l)}>
+                            onClick={() => decider(l, "acceptee")}>
                       Accepter
                     </button>
                     <button className="bouton" style={{ minHeight: 44, padding: "0 1.125rem" }}
                             disabled={occupe === l.id}
-                            onClick={() => refuser(l)}>
+                            onClick={() => decider(l, "refusee")}>
                       Refuser
                     </button>
                     <Link className="bouton" data-style="nu" href={`/demandes/${l.id}`}

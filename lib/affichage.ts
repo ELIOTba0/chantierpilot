@@ -75,6 +75,26 @@ export function majuscule(texte: string): string {
   return texte.charAt(0).toUpperCase() + texte.slice(1);
 }
 
+/**
+ * Met un numéro français en forme lisible : « 06 71 42 08 93 ».
+ *
+ * Accepte ce que les gens tapent réellement — +33, points, tirets,
+ * espaces — et rend toujours la même chose. Un numéro mal présenté
+ * se relit mal, et ces numéros finissent dans des SMS, sur des
+ * devis, et sous le pouce d'un plombier qui appelle en conduisant.
+ *
+ * Ce qui n'est pas reconnu est renvoyé tel quel : mieux vaut un
+ * numéro étranger affiché brut qu'un numéro français mutilé.
+ */
+export function telephoneFrancais(brut: string | null | undefined): string {
+  if (!brut) return "";
+  let n = brut.replace(/[^\d+]/g, "");
+  if (n.startsWith("+33")) n = "0" + n.slice(3);
+  else if (n.startsWith("0033")) n = "0" + n.slice(4);
+  if (!/^0\d{9}$/.test(n)) return brut.trim();
+  return n.replace(/(\d{2})(?=\d)/g, "$1 ").trim();
+}
+
 /** Liens de navigation. Waze d'abord : c'est ce qu'utilisent les artisans. */
 export function lienWaze(adresse: string): string {
   return `https://waze.com/ul?q=${encodeURIComponent(adresse)}&navigate=yes`;

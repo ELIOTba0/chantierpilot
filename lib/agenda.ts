@@ -211,3 +211,45 @@ export async function creerRendezVous(opts: {
   if (!id) throw new Error("Google Calendar n'a pas renvoyé d'identifiant");
   return id;
 }
+
+/**
+ * Supprime un événement. Sert quand le plombier refuse un créneau
+ * que l'assistant avait réservé en attendant sa décision : sans
+ * cela, l'agenda garderait un rendez-vous fantôme et l'assistant
+ * continuerait d'éviter un horaire pourtant libre.
+ *
+ * Un événement déjà absent n'est pas une erreur : on a obtenu ce
+ * qu'on voulait.
+ */
+export async function supprimerRendezVous(opts: {
+  refreshToken: string;
+  calendarId: string;
+  evenementId: string;
+}): Promise<void> {
+  const cal = clientPour(opts.refreshToken);
+  try {
+    await cal.events.delete({
+      calendarId: opts.calendarId,
+      eventId: opts.evenementId,
+    });
+  } catch (e) {
+    const code = (e as { code?: number }).code;
+    if (code === 404 || code === 410) return;
+    throw e;
+  }
+}
+
+/** Change le titre d'un événement, sans toucher au reste. */
+export async function renommerRendezVous(opts: {
+  refreshToken: string;
+  calendarId: string;
+  evenementId: string;
+  titre: string;
+}): Promise<void> {
+  const cal = clientPour(opts.refreshToken);
+  await cal.events.patch({
+    calendarId: opts.calendarId,
+    eventId: opts.evenementId,
+    requestBody: { summary: opts.titre },
+  });
+}
