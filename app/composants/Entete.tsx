@@ -2,8 +2,11 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { sb } from "@/lib/supabase-browser";
+import { chargerIndicateurs, chargerIndicateursPlateforme } from "@/lib/donnees";
 import { useSession, type Espace } from "./Garde";
+import { EVENEMENT_RECHERCHE } from "./ListeAppels";
 
 /**
  * Navigation : barre latérale sur ordinateur, barre du bas sur
@@ -14,22 +17,27 @@ import { useSession, type Espace } from "./Garde";
  * l'écran.
  */
 
-type Onglet = { href: string; libelle: string; court: string; icone: string; aussi?: string[] };
+type Onglet = {
+  href: string; libelle: string; court: string; icone: string;
+  aussi?: string[];
+  compteur?: boolean;      // affiche le nombre de rappels en attente
+};
 
 const ONGLETS: Record<Espace, Onglet[]> = {
   plombier: [
     { href: "/demandes", libelle: "Vue d'ensemble", court: "Accueil", icone: "accueil" },
     { href: "/appels", libelle: "Appels", court: "Appels", icone: "appel" },
-    { href: "/rappels", libelle: "À rappeler", court: "Rappels", icone: "rappel" },
+    { href: "/rappels", libelle: "À rappeler", court: "Rappels", icone: "rappel", compteur: true },
     { href: "/rendez-vous", libelle: "Rendez-vous", court: "RDV", icone: "agenda",
       aussi: ["/agenda"] },
+    { href: "/clients", libelle: "Clients", court: "Clients", icone: "clients" },
     { href: "/reglages", libelle: "Réglages", court: "Réglages", icone: "reglages" },
   ],
   admin: [
     { href: "/admin", libelle: "Vue d'ensemble", court: "Accueil", icone: "accueil" },
     { href: "/admin/entreprises", libelle: "Entreprises", court: "Clients", icone: "entreprise" },
     { href: "/admin/appels", libelle: "Appels", court: "Appels", icone: "appel" },
-    { href: "/admin/rappels", libelle: "Rappels", court: "Rappels", icone: "rappel" },
+    { href: "/admin/rappels", libelle: "Rappels", court: "Rappels", icone: "rappel", compteur: true },
     { href: "/admin/rendez-vous", libelle: "Rendez-vous", court: "RDV", icone: "agenda" },
     { href: "/admin/comptes", libelle: "Comptes et accès", court: "Comptes", icone: "comptes" },
   ],
@@ -42,6 +50,8 @@ const TRACES: Record<string, React.ReactNode> = {
   agenda: <><rect x="3" y="4" width="14" height="13" rx="2.5" /><path d="M3 8h14M7 2.5v3M13 2.5v3" /></>,
   reglages: <><circle cx="10" cy="10" r="2.6" /><path d="M10 2.6v2M10 15.4v2M17.4 10h-2M4.6 10h-2M15.2 4.8l-1.4 1.4M6.2 13.8l-1.4 1.4M15.2 15.2l-1.4-1.4M6.2 6.2 4.8 4.8" /></>,
   entreprise: <><path d="M4 17V5.5L10 3v14M10 7.5h6V17" /><path d="M2.5 17h15M6.5 7.5h1M6.5 10.5h1M6.5 13.5h1M12.5 10.5h1M12.5 13.5h1" /></>,
+  clients: <><circle cx="10" cy="7" r="3" /><path d="M4 17c.7-3.2 3-5 6-5s5.3 1.8 6 5" /></>,
+  recherche: <><circle cx="9" cy="9" r="5.2" /><path d="m13 13 4 4" /></>,
   comptes: <><circle cx="7.5" cy="7" r="2.8" /><path d="M2.5 16.5c.6-2.8 2.6-4.3 5-4.3s4.4 1.5 5 4.3M13 4.5a2.6 2.6 0 0 1 0 5M14.5 12.5c1.6.5 2.6 1.9 3 4" /></>,
 };
 
@@ -73,6 +83,28 @@ export default function Entete() {
   const espace: Espace = session.role === "admin" ? "admin" : "plombier";
   const onglets = ONGLETS[espace];
 
+  // Rappels en attente, recalculés à chaque changement de page : un
+  // rappel traité fait baisser le compteur dès qu'on navigue.
+  const [compteur, setCompteur] = useState<number | null>(null);
+  useEffect(() => {
+    let vivant = true;
+    (espace === "admin" ? chargerIndicateursPlateforme() : chargerIndicateurs())
+      .then((c) => { if (vivant) setCompteur(c.rappels_en_attente); })
+      .catch(() => { if (vivant) setCompteur(null); });
+    return () => { vivant = false; };
+  }, [espace, chemin]);
+
+  const [recherche, setRecherche] = useState("");
+  function rechercher(e: React.FormEvent) {
+    e.preventDefault();
+    const q = recherche.trim();
+    if (!q) return;
+    const cible = espace === "admin" ? "/admin/appels" : "/appels";
+    if (chemin === cible) window.dispatchEvent(new CustomEvent(EVENEMENT_RECHERCHE, { detail: q }));
+    else router.push(`${cible}?q=${encodeURIComponent(q)}`);
+    setRecherche("");
+  }
+
   async function deconnexion() {
     await sb.auth.signOut();
     router.replace("/");
@@ -103,24 +135,36 @@ export default function Entete() {
                   data-actif={actif(o)} aria-current={actif(o) ? "page" : undefined}>
               <Icone nom={o.icone} />
               {o.libelle}
+              {o.compteur && !!compteur && <span className="compteur" aria-label={`${compteur} en attente`}>{compteur}</span>}
             </Link>
           ))}
         </nav>
+
+        <div className="laterale-compte">
+          <span className="compte-nom">{qui}</span>
+          <span className="compte-contexte">
+            {contexte}
+            {session.entreprise?.demo && <span className="puce" data-ton="attenue" data-sans-point="true">Démo</span>}
+          </span>
+          <span className="puce" data-ton={espace === "admin" ? "accent" : "neutre"} data-sans-point="true">
+            {espace === "admin" ? "Admin" : "Plombier"}
+          </span>
+          <button onClick={deconnexion} className="bouton" data-style="nu" data-taille="petit">
+            Se déconnecter
+          </button>
+        </div>
       </aside>
 
       <header className="barre-haut">
         <Link href={onglets[0].href} className="marque barre-haut-marque"><Marque /></Link>
+        <form className="recherche-globale" role="search" onSubmit={rechercher}>
+          <Icone nom="recherche" />
+          <label htmlFor="recherche-globale" className="visuellement-cache">Rechercher un appel</label>
+          <input id="recherche-globale" type="search" value={recherche}
+                 onChange={(e) => setRecherche(e.target.value)}
+                 placeholder={espace === "admin" ? "Rechercher un appelant ou un numéro, toutes entreprises" : "Rechercher un appelant ou un numéro"} />
+        </form>
         <div className="compte">
-          <div className="compte-texte">
-            <span className="compte-nom">{qui}</span>
-            <span className="compte-contexte">
-              {contexte}
-              {session.entreprise?.demo && <span className="puce" data-ton="attenue" data-sans-point="true">Démo</span>}
-            </span>
-          </div>
-          <span className="puce" data-ton={espace === "admin" ? "accent" : "neutre"} data-sans-point="true">
-            {espace === "admin" ? "Admin" : "Plombier"}
-          </span>
           <button onClick={deconnexion} className="bouton" data-style="nu" data-taille="petit">
             Se déconnecter
           </button>
@@ -133,6 +177,7 @@ export default function Entete() {
                 aria-current={actif(o) ? "page" : undefined}>
             <Icone nom={o.icone} />
             {o.court}
+            {o.compteur && !!compteur && <span className="compteur" aria-hidden="true">{compteur}</span>}
           </Link>
         ))}
       </nav>

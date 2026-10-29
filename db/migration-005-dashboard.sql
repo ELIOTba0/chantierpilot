@@ -450,7 +450,9 @@ select
   d.adresse,
   d.commune,
   d.urgence,
-  regexp_replace(coalesce(d.telephone_client, ''), '\D', '', 'g') as telephone_chiffres
+  regexp_replace(coalesce(d.telephone_client, ''), '\D', '', 'g') as telephone_chiffres,
+  rv.assigne_a,
+  d.client_id
 from rendez_vous rv
 join plombiers p           on p.id = rv.plombier_id
 left join plombiers pa     on pa.id = rv.assigne_a
@@ -476,6 +478,33 @@ join plombiers p           on p.id = r.plombier_id
 left join entreprises e    on e.id = p.entreprise_id
 left join appels a         on a.id = r.appel_id
 left join demandes d       on d.id = r.demande_id;
+
+-- Les clients (particuliers) d'une entreprise, avec leur historique.
+create or replace view v_clients with (security_invoker = true) as
+select
+  c.id,
+  c.entreprise_id,
+  e.nom                                   as entreprise_nom,
+  coalesce(e.demo, false)                 as demo,
+  c.nom,
+  c.telephone,
+  c.adresse,
+  c.commune,
+  c.notes,
+  c.cree_le,
+  c.premier_appel,
+  (select count(*) from appels a where a.client_id = c.id)::int as nb_appels,
+  (select max(coalesce(a.debut, a.cree_le)) from appels a where a.client_id = c.id) as dernier_appel,
+  (select count(*) from rendez_vous rv join demandes d on d.id = rv.demande_id
+    where d.client_id = c.id and rv.statut <> 'echec_creation')::int as nb_rdv,
+  (select min(rv.debut) from rendez_vous rv join demandes d on d.id = rv.demande_id
+    where d.client_id = c.id and rv.debut >= now()
+      and rv.statut in ('confirme', 'propose') and rv.termine_le is null) as prochain_rdv,
+  (select count(*) from rappels r where r.client_id = c.id
+    and r.statut in ('a_faire', 'reporte'))::int as rappels_ouverts,
+  regexp_replace(coalesce(c.telephone, ''), '\D', '', 'g') as telephone_chiffres
+from clients c
+left join entreprises e on e.id = c.entreprise_id;
 
 create or replace view v_entreprises with (security_invoker = true) as
 select
@@ -532,6 +561,13 @@ language sql stable security invoker set search_path = public, pg_temp as $$
                     and (p_entreprise is null or entreprise_id = p_entreprise)),
     'rappels_priorite_haute', (select count(*) from v_rappels
                   where ouvert and priorite = 'haute'
+                    and (p_entreprise is null or entreprise_id = p_entreprise)),
+    -- La journée en cours, pour les cartes d'action de l'accueil.
+    'appels_aujourdhui', (select count(*) from v_appels
+                  where date_appel >= cp_debut_fenetre(1)
+                    and (p_entreprise is null or entreprise_id = p_entreprise)),
+    'appels_aujourdhui_traites', (select count(*) from v_appels
+                  where date_appel >= cp_debut_fenetre(1) and traitement = 'traite'
                     and (p_entreprise is null or entreprise_id = p_entreprise))
   )
 $$;

@@ -69,6 +69,8 @@ begin
   assert (select count(*) from v_rendez_vous where entreprise_id <> (select e1 from ids)) = 0, 'fuite rdv';
   assert (select count(*) from v_rappels where entreprise_id <> (select e1 from ids)) = 0, 'fuite rappels';
   assert (select count(*) from clients where entreprise_id <> (select e1 from ids)) = 0, 'fuite clients';
+  assert (select count(*) from v_clients where entreprise_id <> (select e1 from ids)) = 0, 'fuite fiche clients';
+  assert (select count(*) from v_clients) > 0, 'Julien ne voit pas ses clients';
   assert (select count(*) from entreprises) = 1, 'ne doit voir que son entreprise';
   assert (select count(*) from plombiers) = 2, 'doit voir ses 2 collègues (lui compris)';
   assert (select count(*) from administrateurs) = 0, 'ne doit pas voir les admins';
@@ -227,6 +229,8 @@ do $$ begin
   assert (select count(*) from v_rappels) > 0, 'Sophie ne voit pas ses rappels';
   assert (select count(*) from rendez_vous where plombier_id = (select p1 from ids)) = 0,
          'Sophie voit les RDV de Julien';
+  assert (select count(*) from v_clients where entreprise_id = (select e1 from ids)) = 0,
+         'Sophie voit les clients de l''entreprise 1';
   raise notice 'OK  Sophie ne voit rien de l''entreprise 1';
 end $$;
 reset role;

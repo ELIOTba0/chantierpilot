@@ -65,6 +65,27 @@ export type RendezVous = {
   adresse: string | null;
   commune: string | null;
   urgence: string | null;
+  assigne_a: string | null;
+  client_id: string | null;
+};
+
+export type Client = {
+  id: string;
+  entreprise_id: string;
+  entreprise_nom: string | null;
+  demo: boolean;
+  nom: string | null;
+  telephone: string | null;
+  adresse: string | null;
+  commune: string | null;
+  notes: string | null;
+  cree_le: string;
+  premier_appel: string | null;
+  nb_appels: number;
+  dernier_appel: string | null;
+  nb_rdv: number;
+  prochain_rdv: string | null;
+  rappels_ouverts: number;
 };
 
 export type Rappel = {
@@ -143,6 +164,8 @@ export type Indicateurs = {
   rappels_en_attente: number;
   rappels_en_retard: number;
   rappels_priorite_haute: number;
+  appels_aujourdhui: number;
+  appels_aujourdhui_traites: number;
 };
 
 export type IndicateursPlateforme = Indicateurs & {

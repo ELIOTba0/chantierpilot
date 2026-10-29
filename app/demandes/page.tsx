@@ -16,6 +16,7 @@ import Entete from "../composants/Entete";
 import Garde from "../composants/Garde";
 import { Erreur, Vide, type ErreurPostgrest } from "../composants/Etat";
 import { Indicateur, Indicateurs, Puce } from "../composants/Ui";
+import CalendrierSemaine from "../composants/CalendrierSemaine";
 
 export default function Aujourdhui() {
   return (
@@ -144,6 +145,9 @@ function Contenu() {
       : "",
   ].filter(Boolean).join(" ");
 
+  const premier = rappels[0];
+  const enRetard = chiffres?.rappels_en_retard ?? 0;
+
   return (
     <main className="page">
       <h1>{DATE_LONGUE.format(new Date())}</h1>
@@ -151,6 +155,31 @@ function Contenu() {
 
       <Erreur e={erreur} />
       {demandes.length === 0 && <Vide indices={indices} />}
+
+      <div className="cartes-action">
+        <Link href="/appels" className="carte-action">
+          <span className="carte-action-titre">Appels reçus aujourd&apos;hui</span>
+          <span className="carte-action-valeur">{chiffres?.appels_aujourdhui ?? "—"}</span>
+          <span className="carte-action-texte">
+            {!chiffres ? "" : chiffres.appels_aujourdhui === 0
+              ? "Aucun appel pour l'instant aujourd'hui."
+              : `${chiffres.appels_aujourdhui_traites} traité${chiffres.appels_aujourdhui_traites > 1 ? "s" : ""} par l'assistant sans vous solliciter.`}
+          </span>
+          <span className="carte-action-lien">Voir les appels →</span>
+        </Link>
+
+        <Link href="/rappels" className="carte-action" data-ton={enRetard > 0 ? "urgent" : undefined}>
+          <span className="carte-action-titre">À rappeler</span>
+          <span className="carte-action-valeur">{chiffres?.rappels_en_attente ?? "—"}</span>
+          <span className="carte-action-texte">
+            {premier
+              ? `Commencez par ${premier.nom_client ?? "l'appelant inconnu"}${premier.raison ? ` : ${premier.raison.charAt(0).toLowerCase()}${premier.raison.slice(1)}` : "."}`
+              : "Personne n'attend de rappel."}
+            {enRetard > 0 && ` ${enRetard} rappel${enRetard > 1 ? "s" : ""} en retard.`}
+          </span>
+          <span className="carte-action-lien">Traiter les rappels →</span>
+        </Link>
+      </div>
 
       <Indicateurs>
         <Indicateur titre="Appels reçus" valeur={chiffres?.appels_7j ?? null}
@@ -167,55 +196,20 @@ function Contenu() {
                       : "7 derniers jours"} href="/appels" />
       </Indicateurs>
 
+      {prochain && (
+        <>
+          <p className="titre-section">Prochaine intervention</p>
+          <Hero d={prochain} />
+        </>
+      )}
+
+      <h2>Cette semaine</h2>
+      <CalendrierSemaine
+        lien={(r) => (r.demande_id ? `/demandes/${r.demande_id}` : "/rendez-vous")}
+        actions={<Link className="bouton" data-taille="petit" href="/agenda">Planning complet</Link>} />
+
       <div className="colonnes">
         <div className="colonne-large">
-
-          {prochain ? (
-            <>
-              <p className="titre-section">Prochaine intervention</p>
-              <Hero d={prochain} />
-            </>
-          ) : duJour.length > 0 ? (
-            <div className="encadre">
-              <h2>Journée terminée</h2>
-              Plus rien de prévu aujourd&apos;hui. L&apos;assistant continue de
-              prendre les appels.
-            </div>
-          ) : null}
-
-          {duJour.length > 0 && (
-            <>
-              <h2>La journée</h2>
-              <div className="liste">
-                {duJour.map((d) => {
-                  const r = d.rendez_vous![0];
-                  const passe = new Date(r.fin).getTime() < maintenant;
-                  return (
-                    <Link key={d.id} href={`/demandes/${d.id}`} className="rdv"
-                          data-passe={passe}
-                          data-prochain={prochain?.id === d.id}>
-                      <div className="rdv-heure">{heure(r.debut)}</div>
-                      <div className="rdv-corps">
-                        <div className="carte-titre">
-                          {d.nom_client ?? LIBELLES_PROBLEME[d.type_probleme ?? "autre"]}
-                        </div>
-                        <div className="carte-desc">
-                          {LIBELLES_PROBLEME[d.type_probleme ?? "autre"]}
-                          {[d.adresse, d.commune].filter(Boolean).length > 0 &&
-                            ` · ${[d.adresse, d.commune].filter(Boolean).join(", ")}`}
-                        </div>
-                      </div>
-                      {d.urgence === "haute" && (
-                        <span className="puce" data-ton="haute">Urgent</span>
-                      )}
-                      {passe && <span className="discret">Terminé</span>}
-                    </Link>
-                  );
-                })}
-              </div>
-            </>
-          )}
-
           <h2>Derniers appels</h2>
           {recents.length === 0 ? (
             <div className="vide"><p>Aucun appel ces 7 derniers jours.</p></div>

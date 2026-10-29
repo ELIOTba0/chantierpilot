@@ -76,7 +76,7 @@ with base as (
          -- Répartition : la moitié des appels pour l'entreprise 1,
          -- qui sert de compte principal pour la démonstration.
          case when n % 10 < 5 then 1 when n % 10 < 7 then 2 when n % 10 < 9 then 3 else 4 end as e,
-         (n * 5) % 20 as jours,
+         (n * 7) % 20 as jours,
          (n * 37) % 600 + 15 as minutes
   from generate_series(1, 80) n
 )

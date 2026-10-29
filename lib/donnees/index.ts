@@ -12,7 +12,7 @@
 
 import { sb } from "@/lib/supabase-browser";
 import type {
-  Administrateur, Appel, Entreprise, Indicateurs, IndicateursPlateforme,
+  Administrateur, Appel, Client, Entreprise, Indicateurs, IndicateursPlateforme,
   Page, Plombier, Rappel, RendezVous, Session,
 } from "./types";
 
@@ -111,6 +111,7 @@ export type FiltresAppels = Periode & {
   resultat?: string;        // valeur de RESULTAT_APPEL, ou « inconnu »
   traitement?: string;
   entreprise?: string;
+  client?: string;
   ordre?: "recent" | "ancien";
   page?: number;
 };
@@ -127,6 +128,7 @@ export async function listerAppels(f: FiltresAppels): Promise<Page<Appel>> {
   if (f.du) q = q.gte("date_appel", f.du);
   if (f.au) q = q.lt("date_appel", f.au);
   if (f.entreprise) q = q.eq("entreprise_id", f.entreprise);
+  if (f.client) q = q.eq("client_id", f.client);
   if (f.traitement) q = q.eq("traitement", f.traitement);
   if (f.resultat === "inconnu") q = q.is("resultat", null);
   else if (f.resultat) q = q.eq("resultat", f.resultat);
@@ -211,6 +213,7 @@ export type FiltresRdv = Periode & {
   origine?: "ia" | "manuel" | "";
   recherche?: string;
   entreprise?: string;
+  client?: string;
   ordre?: "chrono" | "inverse";
   page?: number;
 };
@@ -224,6 +227,7 @@ export async function listerRendezVous(f: FiltresRdv): Promise<Page<RendezVous>>
   if (f.origine === "ia") q = q.eq("par_ia", true);
   if (f.origine === "manuel") q = q.eq("par_ia", false);
   if (f.entreprise) q = q.eq("entreprise_id", f.entreprise);
+  if (f.client) q = q.eq("client_id", f.client);
   const recherche = f.recherche ? filtreRecherche(f.recherche, "nom_client", "telephone_chiffres") : null;
   if (recherche) q = q.or(recherche);
 
@@ -231,6 +235,13 @@ export async function listerRendezVous(f: FiltresRdv): Promise<Page<RendezVous>>
     .order("debut", { ascending: f.ordre !== "inverse" })
     .range(page * TAILLE_PAGE, page * TAILLE_PAGE + TAILLE_PAGE - 1);
   return { lignes: verifier(r) as unknown as RendezVous[], total: r.count ?? 0 };
+}
+
+/** Tous les rendez-vous d'une période, pour le calendrier (sans pagination). */
+export async function rendezVousDeLaSemaine(du: string, au: string): Promise<RendezVous[]> {
+  return verifier(await sb.from("v_rendez_vous").select("*")
+    .gte("debut", du).lt("debut", au).neq("statut_affiche", "annule")
+    .order("debut").limit(500)) as unknown as RendezVous[];
 }
 
 export async function rendezVousDeLAppel(appelId: string): Promise<RendezVous[]> {
@@ -244,6 +255,32 @@ export async function changerStatutRdv(
   verifier(await sb.rpc("rendez_vous_changer_statut", {
     p_id: id, p_action: action, p_motif: motif ?? null,
   }));
+}
+
+// ------------------------------------------------------------------
+// Clients (les particuliers qui appellent)
+// ------------------------------------------------------------------
+
+export type FiltresClients = { recherche?: string; ordre?: "recent" | "nom"; page?: number };
+
+export async function listerClients(f: FiltresClients): Promise<Page<Client>> {
+  const page = f.page ?? 0;
+  let q = sb.from("v_clients").select("*", { count: "exact" });
+  const recherche = f.recherche ? filtreRecherche(f.recherche, "nom", "telephone_chiffres") : null;
+  if (recherche) {
+    // Une adresse ou une commune aussi : « rue des Lilas », « Avrillé ».
+    const t = nettoyer(f.recherche!);
+    q = q.or(`${recherche},adresse.ilike.*${t}*,commune.ilike.*${t}*`);
+  }
+  q = f.ordre === "nom"
+    ? q.order("nom")
+    : q.order("dernier_appel", { ascending: false, nullsFirst: false });
+  const r = await q.range(page * TAILLE_PAGE, page * TAILLE_PAGE + TAILLE_PAGE - 1);
+  return { lignes: verifier(r) as unknown as Client[], total: r.count ?? 0 };
+}
+
+export async function chargerClient(id: string): Promise<Client | null> {
+  return verifier(await sb.from("v_clients").select("*").eq("id", id).maybeSingle()) as Client | null;
 }
 
 // ------------------------------------------------------------------

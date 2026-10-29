@@ -18,14 +18,17 @@ import { Chargement, EtatVide, Pagination, Puce } from "./Ui";
  * sert au plombier (son entreprise, par le RLS) et à l'administrateur
  * (toutes les entreprises, avec un filtre de plus).
  */
+export const EVENEMENT_RECHERCHE = "cp:recherche-appels";
+
 export default function ListeAppels({
-  base, admin = false, entrepriseFixe,
+  base, admin = false, entrepriseFixe, clientFixe,
 }: {
   base: string;            // préfixe des liens vers le détail : /appels ou /admin/appels
   admin?: boolean;
   entrepriseFixe?: string; // fiche entreprise : filtre imposé
+  clientFixe?: string;     // fiche client : filtre imposé, tout l'historique
 }) {
-  const [periode, setPeriode] = useState<ValeurPeriode>(periodeInitiale("7j"));
+  const [periode, setPeriode] = useState<ValeurPeriode>(periodeInitiale(clientFixe ? "tout" : "7j"));
   const [recherche, setRecherche] = useState("");
   const [rechercheActive, setRechercheActive] = useState("");
   const [resultat, setResultat] = useState("");
@@ -37,6 +40,22 @@ export default function ListeAppels({
   const [donnees, setDonnees] = useState<Page<Appel> | null>(null);
   const [erreur, setErreur] = useState("");
   const [entreprises, setEntreprises] = useState<{ id: string; nom: string }[]>([]);
+
+  // Recherche venue de la barre du haut : à l'ouverture (?q=) ou quand
+  // on la relance alors que la liste est déjà affichée. Un nom ou un
+  // numéro se cherche sur tout l'historique, pas seulement 7 jours.
+  useEffect(() => {
+    if (clientFixe) return;
+    const appliquer = (q: string) => {
+      if (!q) return;
+      setRecherche(q); setRechercheActive(q);
+      setPeriode(periodeInitiale("tout"));
+    };
+    appliquer(new URLSearchParams(window.location.search).get("q")?.trim() ?? "");
+    const ecoute = (e: Event) => appliquer((e as CustomEvent<string>).detail);
+    window.addEventListener(EVENEMENT_RECHERCHE, ecoute);
+    return () => window.removeEventListener(EVENEMENT_RECHERCHE, ecoute);
+  }, [clientFixe]);
 
   // La recherche part après une courte pause de frappe.
   useEffect(() => {
@@ -56,19 +75,20 @@ export default function ListeAppels({
     setDonnees(null);
     const f: FiltresAppels = {
       ...bornes(periode), recherche: rechercheActive, resultat, traitement,
-      entreprise: entrepriseFixe ?? entreprise, ordre, page,
+      entreprise: entrepriseFixe ?? entreprise, client: clientFixe, ordre, page,
     };
     listerAppels(f)
       .then((d) => { if (vivant) { setDonnees(d); setErreur(""); } })
       .catch((e) => { if (vivant) { setErreur(messageErreur(e)); setDonnees({ lignes: [], total: 0 }); } });
     return () => { vivant = false; };
-  }, [periode, rechercheActive, resultat, traitement, entreprise, entrepriseFixe, ordre, page]);
+  }, [periode, rechercheActive, resultat, traitement, entreprise, entrepriseFixe, clientFixe, ordre, page]);
 
+  const periodeDefaut = clientFixe ? "tout" : "7j";
   const filtresActifs = Boolean(rechercheActive || resultat || traitement || entreprise
-    || periode.choix !== "7j");
+    || periode.choix !== periodeDefaut);
 
   function reinitialiser() {
-    setPeriode(periodeInitiale("7j"));
+    setPeriode(periodeInitiale(periodeDefaut));
     setRecherche(""); setResultat(""); setTraitement(""); setEntreprise("");
   }
 
